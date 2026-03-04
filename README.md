@@ -24,14 +24,14 @@ Usage: $(basename "$0") -s SLAB -m H,K,L -a SMILES [-l LATTCONST] [-p PACKING] [
 ```
 
 The first three options are mandatory, and the script will not execute unless they are supplied:
--s  Slab element (e.g. Cu, Pt).
--m  Comma-separated Miller indices (e.g. 1,1,1).
--a  Adsorbate SMILES string (e.g. CH3COOH).
+- **s**:  Slab element (e.g. Cu, Pt).
+- **m**:  Comma-separated Miller indices (e.g. 1,1,1).
+- **a**:  Adsorbate SMILES string (e.g. CH3COOH).
 
 The remaining options are optional:
--l  Lattice constant. Defaults to ASE's database of lattice constants when not specified.
--p  Packing/crystal structure type. Must be one of the following: fcc, hcp, bcc, bct. Defaults to fcc when not specified.
--h  Print this help message and exit. When this option is called, all other options are ignored, and only the help message is printed. Can also be called with --help.
+- **l**:  Lattice constant. Defaults to ASE's database of lattice constants when not specified.
+- **p**:  Packing/crystal structure type. Must be one of the following: fcc, hcp, bcc, bct. Defaults to fcc when not specified.
+- **h**:  Print this help message and exit. When this option is called, all other options are ignored, and only the help message is printed. Can also be called with --help.
 
 For reference, a set of the example output of a successful run for the test system of methoxy (CH3O\*) adsorbate on an Ag(211) surface is included in the "example\_output" subdirectory.
 
