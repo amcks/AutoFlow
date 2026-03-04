@@ -1,9 +1,9 @@
 # AutoFlow
-The AutoFlow script is intended for automating the generation of initial adsorption structures of the given adsorbate on the slab of the given element.
+The AutoFlow script is intended for automating the generation and enumeration of initial adsorption structures of the given adsorbate on the surface slab of the given element.
 
-At the end of the operation, the script generates structure files for the gaseous molecule, the clean slab, and enumerated adsorption configurations, along with the corresponding VASP input files to be used for later optimization using DFT or otherwise.
+The script generates structure files for the gaseous molecule, the clean slab, and enumerated adsorption configurations, along with the corresponding VASP input files to be used for later optimization using DFT or otherwise. A hybrid screening scheme based on forces is used to initially filter out unphysical solutions using a combination of GFN-FF for initialization, followed by GFN1-xTB, as well as other machine learning potential methods like MACE-MP and CHGNet. Post-analysis can then be performed to cluster the configurations after optimization using all the methods, and representative low-energy structures from each cluster can be selected as initial structures for subsequent, more computationally-exhaustive calculations.
 
-A hybrid screening scheme based on forces is used to initially filter out unphysical solutions using a combination of Grimme's GFN-FF -> GFN1-xTB methods, as well as other machine learning potential methods like MACE-MP and CHGNet.
+Although the script is primarily written and executed in bash script, the bash script portions act primarily as a wrapper, while the main logic of the operations are written in procedurally-generated Python script blocks. This reflects the nature of the project's evolution, which started as a simpler bash script, with plans on fully refactoring it to Python in later versions.
 
 ## Installation & Dependencies: 
 
@@ -12,28 +12,32 @@ The complete list of dependencies is listed in the included *AF_env.yaml* file, 
 conda env create -f AF_env.yml
 ```
 
-At the end of which, an environment called "autoflow" will be created, which is activated automatically in the script, or can be activated manually via the following command.
+At the end of which, an environment called 'autoflow' will be created, which is activated automatically in the script, or can be activated manually via the following command.
 ```
 conda activate autoflow
 ```
 
+The enumeration of the adsorptin sites relies on the usage of [DockOnSurf](https://gitlab.com/lch_interfaces/dockonsurf). Users will need to follow the installation steps outlined in their repository/documentation, but their dependencies have been covered by the provided yaml file. Note: **THIS STEP IS MANDATORY**.
+
 ## Usage
-In bash terms, the usage of this script is as follows:
+The primary script to be executed is 'autoflow\_<version>.sh'. In bash terms, the usage of this script is as follows:
 ```
-Usage: $(basename "$0") -s SLAB -m H,K,L -a SMILES [-l LATTCONST] [-p PACKING] [-h/--help]
+Usage: autoflow_<version>.sh -s SLAB -m H,K,L -a SMILES [-l LATTCONST] [-p PACKING] [-h/--help]
 ```
 
 The first three options are mandatory, and the script will not execute unless they are supplied:
 - **s**:  Slab element (e.g. Cu, Pt).
 - **m**:  Comma-separated Miller indices (e.g. 1,1,1).
-- **a**:  Adsorbate SMILES string (e.g. CH3COOH).
+- **a**:  Adsorbate SMILES string (e.g. CO\[\*\] for methoxy, C=C for ethylene, c1ccccc1 for benzene).
 
 The remaining options are optional:
 - **l**:  Lattice constant. Defaults to ASE's database of lattice constants when not specified.
 - **p**:  Packing/crystal structure type. Must be one of the following: fcc, hcp, bcc, bct. Defaults to fcc when not specified.
 - **h**:  Print this help message and exit. When this option is called, all other options are ignored, and only the help message is printed. Can also be called with --help.
 
-For reference, a set of the example output of a successful run for the test system of methoxy (CH3O\*) adsorbate on an Ag(211) surface is included in the "example\_output" subdirectory.
+For reference, a set of the example output of a successful run for the test system of methoxy (CH3O\*) adsorbate on an Ag(211) surface is included in the 'example\_output' subdirectory.
+
+A secondary, post-analysis script, 'ensemble\_post\_analysis.py', is also included for post analysis. At the end of the typical operation of the 'autoflow_<version>.sh' script, the post-analysis script should be executed from within the generated './screening' directory, as is shown in the example output. In the current version, the post-analysis script is a standalone module, but future versions may integrate it into the main script.
 
 ## Features to be Implemented
 Below are the remaining changes to be implemented in the coming versions.
@@ -44,6 +48,7 @@ Below are the remaining changes to be implemented in the coming versions.
 - Implementation of adsorption *pattern* enumeration for higher coverage cases.
 - Implementation of coarse NMA & thermodynamics-based corrections.
 - Add functionality to import user-supplied surface slabs instead of having to generate a surface via ASE every time.
+- Integrate post-analysis script into main script operation. 
 
 ### Low Priority:
 - Refactoring to full Python script can create considerable speedup, especially in terms of I/O or RAM handling, as well as, possibly, JIT compilation.
