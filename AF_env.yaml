@@ -1,0 +1,27 @@
+name: autoflow
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python>=3.9
+  - numpy>=1.16.6
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - networkx>=2.4
+  - cffi
+  - hdbscan
+  - pymatgen
+  - ase
+  - spglib
+  - rdkit
+  - xtb
+  - xtb-python
+  - tblite
+  - tblite-python
+  - pycp2k
+  - python-daemon
+  - pip:             # include pip for troubleshooting.
+    - mace-torch     # For Mace-MP and CHGNet calculators.
+    - chgnet         # Add/remove as needed.

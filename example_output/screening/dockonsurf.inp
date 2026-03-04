@@ -1,0 +1,19 @@
+
+[Global]
+run_type = Screening
+code = VASP
+batch_q_sys = False
+project_name = Ag_enum
+pbc_cell = (9.234961 0.000000 0.000000) (7.387969 9.048377 0.000000) (0.000000 0.000000 37.587294)
+
+[Screening]
+screen_inp_file = slab/INCAR slab/KPOINTS POTCAR
+surf_file = slab/POSCAR
+use_molec_file = gas/POSCAR
+molec_ctrs = 4
+sites = 14, 16, 18, (14,15), (14,16), (14,19), (16,17), (18,19)
+adsorption_height = 2.0
+set_angles = euler
+sample_points_per_angle = 2
+surf_normal_vect = z
+max_structures = False

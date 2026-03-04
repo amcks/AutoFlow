@@ -1,0 +1,23 @@
+SYSTEM = Ag slab
+
+# Main
+PREC   = Accurate
+ENCUT  = 500
+EDIFF  = 1E-6
+LREAL  = .FALSE.
+ALGO   = Normal
+ISMEAR = 0
+SIGMA  = 0.05
+IBRION = 2
+NSW    = 150
+ISIF   = 2
+EDIFFG = -0.02
+ISYM   = 0
+ISPIN  = 1   # set to 2 only if magnetic
+IVDW   = 12
+LDIPOL = .TRUE.
+IDIPOL = 3
+
+# Output
+LWAVE  = .FALSE.
+LCHARG = .FALSE.
