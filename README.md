@@ -20,7 +20,7 @@ conda activate autoflow
 The enumeration of the adsorptin sites relies on the usage of [DockOnSurf](https://gitlab.com/lch_interfaces/dockonsurf). Users will need to follow the installation steps outlined in their repository/documentation, but their dependencies have been covered by the provided yaml file. Note: **THIS STEP IS MANDATORY**.
 
 ## Usage
-The primary script to be executed is 'autoflow\_<version>.sh'. In bash terms, the usage of this script is as follows:
+The primary script to be executed is 'autoflow\_\<version\>.sh'. In bash terms, the usage of this script is as follows:
 ```
 Usage: autoflow_<version>.sh -s SLAB -m H,K,L -a SMILES [-l LATTCONST] [-p PACKING] [-h/--help]
 ```
@@ -37,7 +37,7 @@ The remaining options are optional:
 
 For reference, a set of the example output of a successful run for the test system of methoxy (CH3O\*) adsorbate on an Ag(211) surface is included in the 'example\_output' subdirectory.
 
-A secondary, post-analysis script, 'ensemble\_post\_analysis.py', is also included for post analysis. At the end of the typical operation of the 'autoflow_<version>.sh' script, the post-analysis script should be executed from within the generated './screening' directory, as is shown in the example output. In the current version, the post-analysis script is a standalone module, but future versions may integrate it into the main script.
+A secondary, post-analysis script, 'ensemble\_post\_analysis.py', is also included for post analysis. At the end of the typical operation of the 'autoflow_\<version\>.sh' script, the post-analysis script should be executed from within the generated './screening' directory, as is shown in the example output. In the current version, the post-analysis script is a standalone module, but future versions may integrate it into the main script.
 
 ## Features to be Implemented
 Below are the remaining changes to be implemented in the coming versions.

@@ -67,17 +67,26 @@ while getopts ":s:m:a:l:p:h" opt; do
 ##################################################
 
 The AutoFlow script is intended for automating the
-generation of initial adsorption structures of the
-given adsorbate on the slab of the given element.
-At the end of the operation, the script
-generates structure files for the gaseous molecule,
-the clean slab, and enumerated adsorption
-configurations, along with the corresponding VASP
-input files to be used for later optimization
-using DFT or otherwise. A hybrid screening scheme
-based on forces is used to initially filter out
-unphysical solutions using a combination of
-Grimme's GFN-FF -> GFN1-xTB methods.
+generation and enumeration of initial adsorption
+structures of the given adsorbate on the surface
+slab of the given element.
+
+The script generates structure files for the
+gaseous molecule, the clean slab, and enumerated
+adsorption configurations, along with the
+corresponding VASP input files to be used for later
+optimization using DFT or otherwise. A hybrid
+screening scheme based on forces is used to
+initially filter out unphysical solutions using a
+combination of GFN-FF for initialization, followed
+by GFN1-xTB, as well as other machine learning
+potential methods like MACE-MP and CHGNet.
+Post-analysis can then be performed to cluster the
+configurations after optimization using all the
+methods, and representative low-energy structures
+from each cluster can be selected as initial
+structures for subsequent, more
+computationally-exhaustive calculations.
 
 Usage: $(basename "$0") -s SLAB -m H,K,L -a SMILES
        [-l LATTCONST] [-p PACKING] [-h/--help]
@@ -85,10 +94,11 @@ Usage: $(basename "$0") -s SLAB -m H,K,L -a SMILES
 Required options:
   -s  Slab element (e.g. Cu, Pt).
   -m  Comma-separated Miller indices (e.g. 1,1,1).
-  -a  Adsorbate SMILES string (e.g. CH3COOH).
+  -a  Adsorbate SMILES string (e.g. CO[*]).
 
 Optional options:
-  -l  Lattice constant.
+  -l  Lattice constant. Defaults to ASE's database
+      of lattice constants when not specified.
   -p  Packing/crystal structure type. Must be one
       of the following: fcc, hcp, bcc, bct.
       Defaults to fcc when not specified.
