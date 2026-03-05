@@ -35,7 +35,10 @@ The remaining options are optional:
 - **p**:  Packing/crystal structure type. Must be one of the following: fcc, hcp, bcc, bct. Defaults to fcc when not specified.
 - **h**:  Print this help message and exit. When this option is called, all other options are ignored, and only the help message is printed. Can also be called with --help.
 
-For reference, a set of the example output of a successful run for the test system of methoxy (CH3O\*) adsorbate on an Ag(211) surface is included in the 'example\_output' subdirectory.
+For reference, a set of the example output of a successful run for the test system of methoxy (CH3O\*) adsorbate on an Ag(211) surface is included in the 'example\_output' subdirectory. This set of results was generated using the following command:
+```
+autoflow_v0_7.sh -s Ag -m 2,1,1 -a CO[*] -l 4.13 -p fcc
+```
 
 A secondary, post-analysis script, 'ensemble\_post\_analysis.py', is also included for post analysis. At the end of the typical operation of the 'autoflow_\<version\>.sh' script, the post-analysis script should be executed from within the generated './screening' directory, as is shown in the example output. In the current version, the post-analysis script is a standalone module, but future versions may integrate it into the main script.
 
