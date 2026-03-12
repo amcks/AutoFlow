@@ -70,13 +70,13 @@ atoms_after_gfnff.set_pbc(True)
 # Ensemble optimization
 results = []
 
-# GFN1-xTB
-xtb_calc = TBLite(method="GFN1-xTB", charge=0, spin=0)
-results.append(
-    run_periodic_relaxation(atoms_after_gfnff, xtb_calc, "GFN1-xTB")
-)
-del xtb_calc
-gc.collect()
+## GFN1-xTB (Commented out for now for speedup)
+#xtb_calc = TBLite(method="GFN1-xTB", charge=0, spin=0)
+#results.append(
+#    run_periodic_relaxation(atoms_after_gfnff, xtb_calc, "GFN1-xTB")
+#)
+#del xtb_calc
+#gc.collect()
 
 # MACE
 mace_calc = mace_mp(model="medium", device="cpu")

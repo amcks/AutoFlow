@@ -21,7 +21,7 @@ trap '
     $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))
 ' EXIT
 
-# Atomic number hash lookup table. On average, O(1)
+# Atomic number hash lookup table.
 declare -A Z=(
   [H]=1  [He]=2  [Li]=3  [Be]=4  [B]=5   [C]=6   [N]=7   [O]=8   [F]=9   [Ne]=10
   [Na]=11 [Mg]=12 [Al]=13 [Si]=14 [P]=15 [S]=16 [Cl]=17 [Ar]=18
@@ -63,30 +63,25 @@ while getopts ":s:m:a:l:p:h" opt; do
 	h)
 		cat << EOF
 ##################################################
-###         AutoFlow Bash Script v.0.7.        ###
+###         AutoFlow Bash Script v.0.8.        ###
 ##################################################
 
 The AutoFlow script is intended for automating the
-generation and enumeration of initial adsorption
-structures of the given adsorbate on the surface
-slab of the given element.
-
-The script generates structure files for the
-gaseous molecule, the clean slab, and enumerated
-adsorption configurations, along with the
-corresponding VASP input files to be used for later
-optimization using DFT or otherwise. A hybrid
-screening scheme based on forces is used to
-initially filter out unphysical solutions using a
-combination of GFN-FF for initialization, followed
-by GFN1-xTB, as well as other machine learning
-potential methods like MACE-MP and CHGNet.
-Post-analysis can then be performed to cluster the
-configurations after optimization using all the
-methods, and representative low-energy structures
-from each cluster can be selected as initial
-structures for subsequent, more
-computationally-exhaustive calculations.
+generation of initial adsorption structures of the
+given adsorbate on the slab of the given element.
+At the end of the operation, the script
+generates structure files for the gaseous molecule,
+the clean slab, and enumerated adsorption
+configurations, along with the corresponding VASP
+input files to be used for later optimization
+using DFT or otherwise. A hybrid screening scheme
+based on forces is used to initially filter out
+unphysical solutions using a combination of
+Grimme's GFN-FF -> GFN1-xTB methods, and
+alternatively using MACE-MP and/or CHGNet. At the
+end of the screening, a post-analysis procedure is
+done to filter and cluster all of the generated 
+solutions to pick representative structures.
 
 Usage: $(basename "$0") -s SLAB -m H,K,L -a SMILES
        [-l LATTCONST] [-p PACKING] [-h/--help]
@@ -94,11 +89,10 @@ Usage: $(basename "$0") -s SLAB -m H,K,L -a SMILES
 Required options:
   -s  Slab element (e.g. Cu, Pt).
   -m  Comma-separated Miller indices (e.g. 1,1,1).
-  -a  Adsorbate SMILES string (e.g. CO[*]).
+  -a  Adsorbate SMILES string (e.g. CH3COOH).
 
 Optional options:
-  -l  Lattice constant. Defaults to ASE's database
-      of lattice constants when not specified.
+  -l  Lattice constant.
   -p  Packing/crystal structure type. Must be one
       of the following: fcc, hcp, bcc, bct.
       Defaults to fcc when not specified.
@@ -1065,6 +1059,8 @@ cd ../
 
 # ---------------------------------------------- 
 ## Adsorption mode enumeration
+mkdir ./screening
+
 # Prepare DockonSurf input writer in Python instead of bash
 # Streamlined parsing of json metadata
 cat > input_gen.py << EOF
@@ -1088,10 +1084,12 @@ sites = []
 top_sites = meta.get("surface_atoms", [])
 bridge_sites = meta.get("bridge_sites", [])
 threefold_sites = meta.get("threefold_sites", [])
+fourfold_sites = meta.get("fourfold_sites", [])
 
 sites += [str(i) for i in top_sites]
 sites += [f"({i},{j})" for i, j in bridge_sites]
 sites += [f"({i},{j},{k})" for i, j, k in threefold_sites]
+sites += [f"({i},{j},{k},{l})" for i, j, k, l in fourfold_sites]
 
 sites_str = ", ".join(sites)
 
@@ -1143,21 +1141,161 @@ max_structures = False
 """)
 EOF
 
-# Concatenate slab and gas POTCAR
-cat ./slab/POTCAR ./gas/POTCAR > POTCAR
+# Prepare ASE enumeration for monoatomic adsorbate
+cat > ase_enum.py << EOF
+import json
+import os
+import numpy as np
+from ase.io import read, write
+from ase import Atoms
 
-# Generate DockonSurf input file & run enumeration
-python input_gen.py || {
-    echo "Error: DockonSurf input generation failed"
+# Write in OOP logic for later Python refactoring
+def surface_normal(cell):
+    """
+    Compute surface normal from slab lattice vectors.
+    """
+    a = np.array(cell[0])
+    b = np.array(cell[1])
+    n = np.cross(a, b)
+    return n / np.linalg.norm(n)
+
+
+def centroid(positions, indices):
+    """
+    Compute centroid of atoms defining an adsorption site.
+    """
+    pts = np.array([positions[i] for i in indices])
+    return pts.mean(axis=0)
+
+
+def generate_sites(atoms, site_data):
+    """
+    Generate adsorption site coordinates from JSON definitions.
+    """
+    pos = atoms.positions
+    sites = []
+
+    # Top sites
+    for i in site_data["surface_atoms"]:
+        sites.append(("top", pos[i]))
+
+    # Bridge sites
+    for pair in site_data.get("bridge_sites", []):
+        sites.append(("bridge", centroid(pos, pair)))
+
+    # Threefold sites
+    for tri in site_data.get("threefold_sites", []):
+        sites.append(("threefold", centroid(pos, tri)))
+
+    # Fourfold sites
+    for quad in site_data.get("fourfold_sites", []):
+        sites.append(("fourfold", centroid(pos, quad)))
+
+    return sites
+
+
+def place_adsorbate(slab, ads_symbol, site, normal, height):
+    """
+    Place monoatomic adsorbate at a given site.
+    """
+    slab_copy = slab.copy()
+
+    ads_position = site + height * normal
+    ads = Atoms(ads_symbol, positions=[ads_position])
+
+    slab_copy += ads
+
+    return slab_copy
+
+
+def main():
+
+    slab_path = "./slab/POSCAR"
+    gas_path = "./gas/POSCAR"
+    json_path = "./surface_atoms.json"
+
+    output_root = "./screening"
+    os.makedirs(output_root, exist_ok=True)
+
+    slab = read(slab_path)
+    adsorbate = read(gas_path)
+
+    if len(adsorbate) != 1:
+        raise ValueError("This script only handles monoatomic adsorbates.")
+
+    ads_symbol = adsorbate[0].symbol
+
+    with open(json_path) as f:
+        site_data = json.load(f)
+
+    normal = surface_normal(slab.cell)
+
+    sites = generate_sites(slab, site_data)
+
+    # adsorption heights (Å)
+    heights = {
+        "top": 2.0,
+        "bridge": 1.5,
+        "threefold": 1.5,
+        "fourfold": 1.5
+    }
+
+    conf_index = 0
+
+    for site_type, coord in sites:
+
+        height = heights.get(site_type, 1.1)
+
+        structure = place_adsorbate(
+            slab,
+            ads_symbol,
+            coord,
+            normal,
+            height
+        )
+
+        conf_dir = os.path.join(output_root, f"conf_{conf_index}")
+        os.makedirs(conf_dir, exist_ok=True)
+
+        output_path = os.path.join(conf_dir, "POSCAR")
+
+        write(output_path, structure, format="vasp")
+
+        conf_index += 1
+
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Check number of adsorbate atom(s)
+read -r n_ATOMS < ./gas/meta.xyz
+
+if ! [[ $n_ATOMS =~ ^[0-9]+$ ]]; then
+    echo "Invalid atom count in meta.xyz: $n_ATOMS"
     exit 1
-}
-dockonsurf.py -i dockonsurf.inp -f # DockonSurf run on foreground for clarity
+fi
 
-# File cleanup
-rm -f input_gen.py POTCAR
-mv dockonsurf.inp dockonsurf.log ./screening
+if (( n_ATOMS == 1 )); then
+    python ase_enum.py
+else
+    # Concatenate slab and gas POTCAR
+    cat ./slab/POTCAR ./gas/POTCAR > POTCAR
 
+    # Generate DockonSurf input file & run enumeration
+    python input_gen.py || {
+        echo "Error: DockonSurf input generation failed"
+        exit 1
+    }
+    dockonsurf.py -i dockonsurf.inp -f # DockonSurf run on foreground for clarity
 
+    # File cleanup
+    rm -f POTCAR
+    mv dockonsurf.inp dockonsurf.log ./screening
+fi
+
+# I know this seems redundant, todo optimization for later
+rm -f ase_enum.py input_gen.py
 
 # ---------------------------------------------- 
 ## Coarse optimization + filtering
@@ -1237,13 +1375,13 @@ atoms_after_gfnff.set_pbc(True)
 # Ensemble optimization
 results = []
 
-# GFN1-xTB
-xtb_calc = TBLite(method="GFN1-xTB", charge=0, spin=0)
-results.append(
-    run_periodic_relaxation(atoms_after_gfnff, xtb_calc, "GFN1-xTB")
-)
-del xtb_calc
-gc.collect()
+## GFN1-xTB (Commented out for now for speedup)
+#xtb_calc = TBLite(method="GFN1-xTB", charge=0, spin=0)
+#results.append(
+#    run_periodic_relaxation(atoms_after_gfnff, xtb_calc, "GFN1-xTB")
+#)
+#del xtb_calc
+#gc.collect()
 
 # MACE
 mace_calc = mace_mp(model="medium", device="cpu")
@@ -1285,3 +1423,242 @@ done
 
 wait || true
 echo "Hybrid Screening Complete"
+
+
+# ---------------------------------------------- 
+## Post-analysis and clustering
+# Integrate analysis script into main script
+cat > ensemble_post_analysis.py << 'EOF'
+import os
+import json
+import numpy as np
+from ase.io import read
+from ase.data import covalent_radii
+from ase.neighborlist import NeighborList
+from scipy.cluster.hierarchy import fclusterdata
+
+# Overall parameters
+#METHODS = ["GFN1-xTB", "MACE-MP", "CHGNet"]
+METHODS = ["MACE-MP", "CHGNet"]
+
+MAX_ENERGY_WINDOW = 0.8   # eV (per method)
+CLUSTER_CUTOFF = 1.0      # clustering threshold in feature space
+BOND_SCALE = 1.2          # covalent radii scaling for bond detection
+ENERGY_WEIGHT = 0.1       # scaling factor for energy differences in features
+
+
+# Bond graph builder for later reactivity detection
+def build_bond_graph(atoms, scale=BOND_SCALE):
+    cutoffs = [covalent_radii[atoms[i].number] * scale for i in range(len(atoms))]
+    nl = NeighborList(cutoffs, self_interaction=False, bothways=True)
+    nl.update(atoms)
+
+    bonds = set()
+    for i in range(len(atoms)):
+        neighbors, _ = nl.get_neighbors(i)
+        for j in neighbors:
+            if j > i:
+                bonds.add((i, j))
+    return bonds
+
+
+# Load slab metadata
+with open("../surface_atoms.json") as f:
+    slab_info = json.load(f)
+n_slab_atoms = slab_info["total_atoms"]
+
+
+# Build reference bond graph from gas-phase adsorbate
+gas_ads = read("../gas/POSCAR")
+n_ads_ref = len(gas_ads)
+initial_bonds = build_bond_graph(gas_ads)
+
+print(f"Reference adsorbate atoms: {n_ads_ref}")
+print(f"Reference bond count: {len(initial_bonds)}")
+
+
+# Reactivity detection helper
+def is_reactive(atoms):
+    ads = atoms[n_slab_atoms:]
+    if len(ads) != n_ads_ref:
+        return True
+    current_bonds = build_bond_graph(ads)
+    for bond in initial_bonds:
+        if bond not in current_bonds:
+            return True
+    return False
+
+
+# Load structures and energies
+confs = []
+
+for d in sorted(x for x in os.listdir(".") if x.startswith("conf_")):
+    json_file = os.path.join(d, "ensemble_screen.json")
+    if not os.path.exists(json_file):
+        continue
+
+    with open(json_file) as jf:
+        results = json.load(jf)
+
+    energy_map = {r["method"]: r["energy"] for r in results}
+
+    for method in METHODS:
+        xyz_file = os.path.join(d, f"relaxed_{method}.xyz")
+        if not os.path.exists(xyz_file):
+            continue
+
+        energy = energy_map.get(method, None)
+        if energy is None:
+            continue
+
+        atoms = read(xyz_file)
+        confs.append({
+            "conf": d,
+            "method": method,
+            "energy": float(energy),
+            "atoms": atoms
+        })
+
+print(f"\nTotal loaded structures: {len(confs)}")
+
+
+# Method-specific energy filtering
+filtered = []
+
+for method in METHODS:
+    method_confs = [c for c in confs if c["method"] == method]
+    if not method_confs:
+        continue
+
+    energies = np.array([c["energy"] for c in method_confs])
+    emin = energies.min()
+
+    for c in method_confs:
+        if c["energy"] - emin <= MAX_ENERGY_WINDOW:
+            filtered.append(c)
+
+print(f"Number of filtered structures: {len(filtered)}")
+if len(filtered) == 0:
+    print("No structures survived energy filtering.")
+    exit()
+
+
+# Feature construction
+# COM + first 2 heavy atoms vector (with reactive/single-atom fallbacks)
+features = []
+names = []
+
+for c in filtered:
+    atoms = c["atoms"]
+    ads = atoms[n_slab_atoms:]
+    reactive_flag = is_reactive(atoms)
+
+    # Center of mass for translational
+    com = ads.get_center_of_mass()
+
+    # Orientation vector for rotational
+    symbols = ads.get_chemical_symbols()
+    heavy = [i for i, s in enumerate(symbols) if s != "H"]
+
+    if reactive_flag or len(heavy) == 0:
+        v = np.zeros(3)
+    elif len(heavy) == 1:
+        v = ads.positions[heavy[0]] - com
+        norm = np.linalg.norm(v)
+        if norm > 1e-8:
+            v /= norm
+        else:
+            v = np.zeros(3)
+    else:
+        p1 = ads.positions[heavy[0]]
+        p2 = ads.positions[heavy[1]]
+        v = p2 - p1
+        norm = np.linalg.norm(v)
+        if norm > 1e-8:
+            v /= norm
+        else:
+            v = np.zeros(3)
+
+    # Energy weighting
+    method_confs = [fc for fc in filtered if fc["method"] == c["method"]]
+    emin = min(fc["energy"] for fc in method_confs)
+    energy_offset = (c["energy"] - emin) * ENERGY_WEIGHT
+
+    feature = np.concatenate([com + energy_offset, v])
+    features.append(feature)
+    names.append(f"{c['conf']}|{c['method']}")
+
+features = np.vstack(features)
+
+
+# Clustering
+if len(features) == 1:
+    labels = np.array([1])
+else:
+    labels = fclusterdata(features, t=CLUSTER_CUTOFF, criterion="distance")
+
+clusters = {}
+for name, label in zip(names, labels):
+    clusters.setdefault(int(label), []).append(name)
+
+
+# Representative selection
+rep_data = []
+
+for cluster_id, members in clusters.items():
+    best = min(
+        members,
+        key=lambda m: next(
+            c["energy"] for c in filtered
+            if f"{c['conf']}|{c['method']}" == m
+        )
+    )
+
+    conf_name, method = best.split("|")
+    entry = next(
+        c for c in filtered
+        if c["conf"] == conf_name and c["method"] == method
+    )
+
+    reactive_flag = is_reactive(entry["atoms"])
+
+    rep_data.append({
+        "cluster": cluster_id,
+        "conf": conf_name,
+        "method": method,
+        "energy": entry["energy"],
+        "reactive": reactive_flag
+    })
+
+
+# Save metadata
+summary = {
+    "n_loaded": len(confs),
+    "n_filtered": len(filtered),
+    "n_clusters": len(clusters),
+    "representatives": rep_data,
+    "clusters": clusters
+}
+
+with open("ensemble_screening_summary.json", "w") as f:
+    json.dump(summary, f, indent=2)
+
+
+# Print summary table
+print("\nTop representative candidates:")
+print("-" * 75)
+print(f"{'Cluster':<8} {'Conf':<10} {'Method':<10} "
+      f"{'Energy (eV)':<15} {'Reactive':<8}")
+print("-" * 75)
+
+for r in sorted(rep_data, key=lambda x: x["energy"]):
+    print(f"{r['cluster']:<8} {r['conf']:<10} {r['method']:<10} "
+          f"{r['energy']:<15.6f} {str(r['reactive']):<8}")
+
+print("-" * 75)
+print(f"Clusters found: {len(clusters)}")
+EOF
+
+# Execute post-analysis
+python ensemble_post_analysis.py
+echo "Post-analysis Complete"

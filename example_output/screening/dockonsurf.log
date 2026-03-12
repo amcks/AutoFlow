@@ -1,9 +1,9 @@
-17-Feb-26 14:27:14-INFO: DockOnSurf started on /home/ans819/WF/v_0_7.
-17-Feb-26 14:27:14-INFO: To kill DockOnSurf execution type: `$ kill 1792925`.
-17-Feb-26 14:27:14-INFO: Using 'dockonsurf.inp' as input.
-17-Feb-26 14:27:16-WARNING: POTCAR data with symbol Ag is not known to pymatgen. Your POTCAR may be corrupted or pymatgen's POTCAR database is incomplete.
-17-Feb-26 14:27:16-WARNING: Collisions are deactivated: Overlapping of adsorbate and surface is possible
-17-Feb-26 14:27:16-INFO: Correctly read dockonsurf.inp parameters: 
+12-Mar-26 11:54:20-INFO: DockOnSurf started on /home/ans819/WF/v_0_8.
+12-Mar-26 11:54:20-INFO: To kill DockOnSurf execution type: `$ kill 458697`.
+12-Mar-26 11:54:20-INFO: Using 'dockonsurf.inp' as input.
+12-Mar-26 11:54:22-WARNING: POTCAR data with symbol Ag is not known to pymatgen. Your POTCAR may be corrupted or pymatgen's POTCAR database is incomplete.
+12-Mar-26 11:54:22-WARNING: Collisions are deactivated: Overlapping of adsorbate and surface is possible
+12-Mar-26 11:54:22-INFO: Correctly read dockonsurf.inp parameters: 
 
 	isolated: False
 	screening: True
@@ -11,12 +11,12 @@
 	code: vasp
 	batch_q_sys: False
 	potcar_dir: False
-	pbc_cell: Cell([[9.234961, 0.0, 0.0], [7.387969, 9.048377, 0.0], [0.0, 0.0, 37.587294]])
+	pbc_cell: Cell([11.681404, 8.26, 37.300878])
 	project_name: Ag_enum
 	special_atoms: []
 	screen_inp_file: ['slab/INCAR', 'slab/KPOINTS', 'POTCAR']
 	surf_file: slab/POSCAR
-	sites: [14, 16, 18, [14, 15], [14, 16], [14, 19], [16, 17], [18, 19]]
+	sites: [8, 9, [8, 9], [8, 11], [9, 10], [9, 21, 34, 46]]
 	molec_ctrs: [4]
 	select_magns: ['moi']
 	confs_per_magn: 2
@@ -32,17 +32,15 @@
 	use_molec_file: gas/POSCAR
 	h_acceptor: False
 
-17-Feb-26 14:27:16-INFO: Carrying out procedures for the screening of adsorbate-surface structures.
-17-Feb-26 14:27:16-INFO: Using 'gas/POSCAR' as only conformer.
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '14' is [-0. -0.  1.]
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '16' is [-0.26342775  0.21325103  0.94081338]
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '18' is [ 0.20843399 -0.17636723  0.96200305]
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '[14, 15]' is [0. 0. 1.]
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '[14, 16]' is [-0.13200181  0.11169384  0.98493655]
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '[14, 19]' is [ 0.10109265 -0.09098339  0.99070798]
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '[16, 17]' is [-0.26061316  0.21049525  0.94221682]
-17-Feb-26 14:27:16-INFO: The perpendicular vector to the surface at site '[18, 19]' is [ 0.21019978 -0.18017124  0.9609133 ]
-17-Feb-26 14:27:16-INFO: Generated 48 adsorbate-surface atomic configurations to carry out a calculation of.
-17-Feb-26 14:27:16-INFO: Doing a dry run of screening.
-17-Feb-26 14:27:16-INFO: Finished the procedures for the screening of adsorbate-surface structures section.
-17-Feb-26 14:27:16-INFO: DockOnSurf finished.
+12-Mar-26 11:54:22-INFO: Carrying out procedures for the screening of adsorbate-surface structures.
+12-Mar-26 11:54:22-INFO: Using 'gas/POSCAR' as only conformer.
+12-Mar-26 11:54:22-INFO: The perpendicular vector to the surface at site '8' is [-0. -0.  1.]
+12-Mar-26 11:54:22-INFO: The perpendicular vector to the surface at site '9' is [ 0. -0.  1.]
+12-Mar-26 11:54:22-INFO: The perpendicular vector to the surface at site '[8, 9]' is [0. 0. 1.]
+12-Mar-26 11:54:22-INFO: The perpendicular vector to the surface at site '[8, 11]' is [0. 0. 1.]
+12-Mar-26 11:54:22-INFO: The perpendicular vector to the surface at site '[9, 10]' is [0. 0. 1.]
+12-Mar-26 11:54:22-INFO: The perpendicular vector to the surface at site '[9, 21, 34, 46]' is [0. 0. 1.]
+12-Mar-26 11:54:22-INFO: Generated 36 adsorbate-surface atomic configurations to carry out a calculation of.
+12-Mar-26 11:54:22-INFO: Doing a dry run of screening.
+12-Mar-26 11:54:22-INFO: Finished the procedures for the screening of adsorbate-surface structures section.
+12-Mar-26 11:54:22-INFO: DockOnSurf finished.

@@ -1,213 +1,191 @@
 {
-  "n_loaded": 144,
-  "n_filtered": 132,
-  "n_clusters": 8,
+  "n_loaded": 72,
+  "n_filtered": 29,
+  "n_clusters": 17,
   "representatives": [
     {
-      "cluster": 3,
-      "conf": "conf_35",
-      "method": "GFN1-xTB",
-      "energy": -4451.187070695966,
-      "reactive": false
-    },
-    {
-      "cluster": 5,
-      "conf": "conf_42",
-      "method": "GFN1-xTB",
-      "energy": -4450.870420586536,
-      "reactive": false
-    },
-    {
-      "cluster": 8,
-      "conf": "conf_17",
-      "method": "GFN1-xTB",
-      "energy": -4451.10244984875,
-      "reactive": false
-    },
-    {
-      "cluster": 1,
-      "conf": "conf_37",
-      "method": "GFN1-xTB",
-      "energy": -4451.059498792985,
-      "reactive": false
-    },
-    {
-      "cluster": 4,
-      "conf": "conf_31",
+      "cluster": 14,
+      "conf": "conf_23",
       "method": "MACE-MP",
-      "energy": -130.95394897460938,
+      "energy": -1706.30615234375,
+      "reactive": true
+    },
+    {
+      "cluster": 11,
+      "conf": "conf_15",
+      "method": "CHGNet",
+      "energy": -154.28079223632812,
       "reactive": false
     },
     {
-      "cluster": 2,
-      "conf": "conf_19",
+      "cluster": 7,
+      "conf": "conf_4",
       "method": "CHGNet",
-      "energy": -132.78822326660156,
+      "energy": -153.73175048828125,
       "reactive": true
     },
     {
       "cluster": 6,
-      "conf": "conf_16",
+      "conf": "conf_10",
       "method": "CHGNet",
-      "energy": -132.59747314453125,
+      "energy": -154.07656860351562,
+      "reactive": false
+    },
+    {
+      "cluster": 9,
+      "conf": "conf_11",
+      "method": "CHGNet",
+      "energy": -154.0765838623047,
+      "reactive": false
+    },
+    {
+      "cluster": 10,
+      "conf": "conf_14",
+      "method": "CHGNet",
+      "energy": -154.44931030273438,
+      "reactive": false
+    },
+    {
+      "cluster": 12,
+      "conf": "conf_21",
+      "method": "CHGNet",
+      "energy": -154.26162719726562,
+      "reactive": false
+    },
+    {
+      "cluster": 13,
+      "conf": "conf_22",
+      "method": "CHGNet",
+      "energy": -153.7877960205078,
       "reactive": true
     },
     {
-      "cluster": 7,
-      "conf": "conf_38",
+      "cluster": 17,
+      "conf": "conf_24",
       "method": "CHGNet",
-      "energy": -132.51092529296875,
-      "reactive": true
+      "energy": -154.27066040039062,
+      "reactive": false
+    },
+    {
+      "cluster": 16,
+      "conf": "conf_25",
+      "method": "CHGNet",
+      "energy": -154.45443725585938,
+      "reactive": false
+    },
+    {
+      "cluster": 15,
+      "conf": "conf_26",
+      "method": "CHGNet",
+      "energy": -154.45437622070312,
+      "reactive": false
+    },
+    {
+      "cluster": 8,
+      "conf": "conf_3",
+      "method": "CHGNet",
+      "energy": -154.45559692382812,
+      "reactive": false
+    },
+    {
+      "cluster": 3,
+      "conf": "conf_30",
+      "method": "CHGNet",
+      "energy": -154.27386474609375,
+      "reactive": false
+    },
+    {
+      "cluster": 1,
+      "conf": "conf_33",
+      "method": "CHGNet",
+      "energy": -154.23654174804688,
+      "reactive": false
+    },
+    {
+      "cluster": 4,
+      "conf": "conf_34",
+      "method": "CHGNet",
+      "energy": -154.08070373535156,
+      "reactive": false
+    },
+    {
+      "cluster": 2,
+      "conf": "conf_35",
+      "method": "CHGNet",
+      "energy": -154.072265625,
+      "reactive": false
+    },
+    {
+      "cluster": 5,
+      "conf": "conf_6",
+      "method": "CHGNet",
+      "energy": -153.72714233398438,
+      "reactive": false
     }
   ],
   "clusters": {
-    "3": [
-      "conf_0|GFN1-xTB",
-      "conf_1|GFN1-xTB",
-      "conf_10|GFN1-xTB",
-      "conf_11|GFN1-xTB",
-      "conf_18|GFN1-xTB",
-      "conf_19|GFN1-xTB",
-      "conf_2|GFN1-xTB",
-      "conf_20|GFN1-xTB",
-      "conf_21|GFN1-xTB",
-      "conf_22|GFN1-xTB",
-      "conf_23|GFN1-xTB",
-      "conf_24|GFN1-xTB",
-      "conf_25|GFN1-xTB",
-      "conf_26|GFN1-xTB",
-      "conf_27|GFN1-xTB",
-      "conf_28|GFN1-xTB",
-      "conf_29|GFN1-xTB",
-      "conf_3|GFN1-xTB",
-      "conf_30|GFN1-xTB",
-      "conf_32|GFN1-xTB",
-      "conf_33|GFN1-xTB",
-      "conf_35|GFN1-xTB",
-      "conf_4|GFN1-xTB",
-      "conf_41|GFN1-xTB",
-      "conf_47|GFN1-xTB",
-      "conf_5|GFN1-xTB",
-      "conf_6|GFN1-xTB",
-      "conf_7|GFN1-xTB",
-      "conf_9|GFN1-xTB",
-      "conf_0|MACE-MP",
-      "conf_10|MACE-MP",
-      "conf_11|MACE-MP",
-      "conf_18|MACE-MP",
-      "conf_2|MACE-MP",
-      "conf_20|MACE-MP",
-      "conf_21|MACE-MP",
-      "conf_22|MACE-MP",
-      "conf_23|MACE-MP",
-      "conf_24|MACE-MP",
-      "conf_25|MACE-MP",
-      "conf_26|MACE-MP",
-      "conf_27|MACE-MP",
-      "conf_28|MACE-MP",
-      "conf_29|MACE-MP",
-      "conf_3|MACE-MP",
-      "conf_30|MACE-MP",
-      "conf_32|MACE-MP",
-      "conf_33|MACE-MP",
-      "conf_35|MACE-MP",
-      "conf_4|MACE-MP",
-      "conf_41|MACE-MP",
-      "conf_5|MACE-MP",
-      "conf_6|MACE-MP",
-      "conf_7|MACE-MP",
-      "conf_8|MACE-MP",
-      "conf_9|MACE-MP",
+    "14": [
+      "conf_23|MACE-MP"
+    ],
+    "11": [
       "conf_0|CHGNet",
-      "conf_10|CHGNet",
-      "conf_11|CHGNet",
-      "conf_18|CHGNet",
-      "conf_2|CHGNet",
-      "conf_20|CHGNet",
-      "conf_21|CHGNet",
-      "conf_22|CHGNet",
-      "conf_23|CHGNet",
-      "conf_24|CHGNet",
-      "conf_25|CHGNet",
-      "conf_27|CHGNet",
-      "conf_28|CHGNet",
-      "conf_29|CHGNet",
-      "conf_3|CHGNet",
-      "conf_30|CHGNet",
-      "conf_32|CHGNet",
-      "conf_33|CHGNet",
-      "conf_35|CHGNet",
-      "conf_4|CHGNet",
-      "conf_41|CHGNet",
-      "conf_5|CHGNet",
-      "conf_6|CHGNet",
-      "conf_7|CHGNet",
-      "conf_9|CHGNet"
-    ],
-    "5": [
-      "conf_16|GFN1-xTB",
-      "conf_42|GFN1-xTB",
-      "conf_43|GFN1-xTB",
-      "conf_44|GFN1-xTB",
-      "conf_45|GFN1-xTB",
-      "conf_46|GFN1-xTB",
-      "conf_12|MACE-MP",
-      "conf_13|MACE-MP",
-      "conf_14|MACE-MP",
-      "conf_15|MACE-MP",
-      "conf_16|MACE-MP",
-      "conf_17|MACE-MP",
-      "conf_42|MACE-MP",
-      "conf_43|MACE-MP",
-      "conf_44|MACE-MP",
-      "conf_45|MACE-MP",
-      "conf_46|MACE-MP",
-      "conf_47|MACE-MP",
       "conf_12|CHGNet",
-      "conf_13|CHGNet",
-      "conf_14|CHGNet",
-      "conf_15|CHGNet",
-      "conf_17|CHGNet",
-      "conf_42|CHGNet",
-      "conf_43|CHGNet",
-      "conf_44|CHGNet",
-      "conf_45|CHGNet",
-      "conf_46|CHGNet",
-      "conf_47|CHGNet"
-    ],
-    "8": [
-      "conf_17|GFN1-xTB"
-    ],
-    "1": [
-      "conf_36|GFN1-xTB",
-      "conf_37|GFN1-xTB",
-      "conf_39|GFN1-xTB",
-      "conf_40|GFN1-xTB",
-      "conf_36|MACE-MP",
-      "conf_37|MACE-MP",
-      "conf_39|MACE-MP",
-      "conf_40|MACE-MP",
-      "conf_36|CHGNet",
-      "conf_37|CHGNet",
-      "conf_39|CHGNet",
-      "conf_40|CHGNet"
-    ],
-    "4": [
-      "conf_31|MACE-MP"
-    ],
-    "2": [
-      "conf_1|CHGNet",
-      "conf_19|CHGNet",
-      "conf_26|CHGNet",
-      "conf_31|CHGNet",
-      "conf_34|CHGNet",
-      "conf_8|CHGNet"
-    ],
-    "6": [
-      "conf_16|CHGNet"
+      "conf_15|CHGNet"
     ],
     "7": [
-      "conf_38|CHGNet"
+      "conf_1|CHGNet",
+      "conf_4|CHGNet"
+    ],
+    "6": [
+      "conf_10|CHGNet",
+      "conf_7|CHGNet"
+    ],
+    "9": [
+      "conf_11|CHGNet",
+      "conf_8|CHGNet"
+    ],
+    "10": [
+      "conf_14|CHGNet",
+      "conf_17|CHGNet"
+    ],
+    "12": [
+      "conf_18|CHGNet",
+      "conf_21|CHGNet"
+    ],
+    "13": [
+      "conf_19|CHGNet",
+      "conf_22|CHGNet"
+    ],
+    "17": [
+      "conf_24|CHGNet",
+      "conf_27|CHGNet"
+    ],
+    "16": [
+      "conf_25|CHGNet",
+      "conf_28|CHGNet"
+    ],
+    "15": [
+      "conf_26|CHGNet",
+      "conf_29|CHGNet"
+    ],
+    "8": [
+      "conf_3|CHGNet"
+    ],
+    "3": [
+      "conf_30|CHGNet"
+    ],
+    "1": [
+      "conf_33|CHGNet"
+    ],
+    "4": [
+      "conf_34|CHGNet"
+    ],
+    "2": [
+      "conf_35|CHGNet"
+    ],
+    "5": [
+      "conf_6|CHGNet",
+      "conf_9|CHGNet"
     ]
   }
 }

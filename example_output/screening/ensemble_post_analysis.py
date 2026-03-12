@@ -7,7 +7,8 @@ from ase.neighborlist import NeighborList
 from scipy.cluster.hierarchy import fclusterdata
 
 # Overall parameters
-METHODS = ["GFN1-xTB", "MACE-MP", "CHGNet"]
+#METHODS = ["GFN1-xTB", "MACE-MP", "CHGNet"]
+METHODS = ["MACE-MP", "CHGNet"]
 
 MAX_ENERGY_WINDOW = 0.8   # eV (per method)
 CLUSTER_CUTOFF = 1.0      # clustering threshold in feature space
@@ -225,4 +226,3 @@ for r in sorted(rep_data, key=lambda x: x["energy"]):
 
 print("-" * 75)
 print(f"Clusters found: {len(clusters)}")
-

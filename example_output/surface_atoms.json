@@ -2,77 +2,85 @@
   "element": "Ag",
   "packing": "fcc",
   "miller": [
-    2,
     1,
-    1
+    1,
+    0
   ],
-  "requested_layers": 5,
-  "detected_layer_count": 10,
+  "requested_layers": 3,
+  "detected_layer_count": 6,
   "cell": [
     [
-      9.234960747074132,
+      11.681404025201765,
       0.0,
       0.0
     ],
     [
-      7.387968597659305,
-      9.048376649985345,
+      0.0,
+      8.26,
       0.0
     ],
     [
       0.0,
       0.0,
-      37.58729447827089
+      37.300877515751104
     ]
   ],
-  "total_atoms": 40,
+  "total_atoms": 48,
   "surface_atoms": [
-    14,
-    16,
-    18
+    8,
+    9
   ],
   "bridge_sites": [
     [
-      14,
-      15
+      8,
+      9
     ],
     [
-      14,
-      16
+      8,
+      11
     ],
     [
-      14,
-      19
-    ],
-    [
-      16,
-      17
-    ],
-    [
-      18,
-      19
+      9,
+      10
     ]
   ],
   "threefold_sites": [],
   "threefold_types": [],
-  "fourfold_sites": [],
-  "fourfold_types": [],
+  "fourfold_sites": [
+    [
+      9,
+      21,
+      34,
+      46
+    ]
+  ],
+  "fourfold_types": [
+    "fourfold"
+  ],
   "frozen_atoms": [
     0,
     1,
     2,
     3,
     4,
-    5,
-    6,
     7,
-    20,
-    21,
-    22,
-    23,
+    12,
+    13,
+    14,
+    15,
+    16,
+    19,
     24,
     25,
     26,
-    27
+    27,
+    28,
+    31,
+    36,
+    37,
+    38,
+    39,
+    40,
+    43
   ]
 }
