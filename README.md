@@ -3,7 +3,7 @@ The AutoFlow script is intended for automating the generation and enumeration of
 
 The script generates structure files for the gaseous molecule, the clean slab, and enumerated adsorption configurations, along with the corresponding VASP input files to be used for later optimization using DFT or otherwise. A hybrid screening scheme based on forces is used to initially filter out unphysical solutions using a combination of GFN-FF for initialization, followed by structural optimization with GFN1-xTB, as well as other machine learning potential methods like MACE-MP and CHGNet. Post-analysis is then be performed to cluster the configurations after optimization using all the methods, and representative low-energy structures from each cluster can be selected as initial structures for subsequent, more computationally-exhaustive calculations.
 
-Although the script is primarily written and executed in bash script, the bash script portions act primarily as a wrapper, while the main logic of the operations is written in procedurally-generated Python script blocks. This reflects the nature of the project's evolution, which started as a simpler bash script, with plans on fully refactoring it to Python in later versions.
+Although the script is primarily written and executed in bash script, the bash script portions act as a wrapper, while the main logic of the operations is written in procedurally-generated Python script blocks. This reflects the nature of the project's evolution, which started as a simpler bash script, with plans on fully refactoring it to Python in later versions.
 
 ## Installation & Dependencies: 
 
@@ -28,7 +28,7 @@ Usage: autoflow_<version>.sh -s SLAB -m H,K,L -a SMILES [-l LATTCONST] [-p PACKI
 The first three options are mandatory, and the script will not execute unless they are supplied:
 - **s**:  Slab element (e.g. Cu, Pt).
 - **m**:  Comma-separated Miller indices (e.g. 1,1,1).
-- **a**:  Adsorbate SMILES string (e.g. CO\[\*\] for methoxy, C=C for ethylene, c1ccccc1 for benzene).
+- **a**:  Adsorbate SMILES string. Where applicable, bonds formed during adsorption should be specified by a dummy atom \[\*\] (e.g. CO\[\*\] for methoxy, C=C for ethylene, c1ccccc1 for benzene).
 
 The remaining options are optional:
 - **l**:  Lattice constant. Defaults to ASE's database of lattice constants when not specified.
