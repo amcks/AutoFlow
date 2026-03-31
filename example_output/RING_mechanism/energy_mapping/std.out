@@ -1,0 +1,47 @@
+fcc Slab Element: Ag
+Miller Indices of Simulated Facet: (1,1,1)
+Adsorbate SMILES String: C(=O)C
+Available arrays: dict_keys(['numbers', 'positions', 'tags'])
+Running DockOnSurf.
+To check DockOnSurf activity see '0/dockonsurf.log'.
+Hybrid Screening Starting conf_0
+Hybrid Screening Starting conf_1
+Hybrid Screening Starting conf_10
+Hybrid Screening Starting conf_11
+Hybrid Screening Starting conf_12
+Hybrid Screening Starting conf_13
+Hybrid Screening Starting conf_14
+Hybrid Screening Starting conf_15
+Hybrid Screening Starting conf_16
+Hybrid Screening Starting conf_17
+Hybrid Screening Starting conf_18
+Hybrid Screening Starting conf_19
+Hybrid Screening Starting conf_2
+Hybrid Screening Starting conf_20
+Hybrid Screening Starting conf_21
+Hybrid Screening Starting conf_22
+Hybrid Screening Starting conf_23
+Hybrid Screening Starting conf_3
+Hybrid Screening Starting conf_4
+Hybrid Screening Starting conf_5
+Hybrid Screening Starting conf_6
+Hybrid Screening Starting conf_7
+Hybrid Screening Starting conf_8
+Hybrid Screening Starting conf_9
+Hybrid Screening Complete
+Reference adsorbate atoms: 7
+Reference bond count: 6
+
+Total loaded structures: 48
+Number of filtered structures: 45
+
+Best candidate per method:
+------------------------------------------------------------
+Conf       Method     Energy (eV)     Reactive
+------------------------------------------------------------
+conf_22    CHGNet     -212.988907     False   
+conf_22    MACE-MP    -210.498383     False   
+------------------------------------------------------------
+Post-analysis Complete
+
+Total execution time: 01:13:00

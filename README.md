@@ -42,6 +42,13 @@ autoflow_v0_8.sh -s Ag -m 1,1,0 -a CO[*] -l 4.13 -p fcc
 
 At the end of the initial optimization, a post-analysis procedure is performed to filter and cluster all the solutions from the different methods on the basis of geometry and energies. While previous versions have the post-analysis script as a separate, standalone module, in the current version, the post-analysis module is integrated into the main script, but the python script used is still printed for the sake of debugging.
 
+## Example Applications
+Currently, the 'example\_output' subdirectory contains two examples:
+- AutoFlow usage on a single adsorption structure optimization
+- Integration with the Rule Input Network Generator \([RING](https://doi.org/10.1016/j.compchemeng.2012.06.008)\) workflow to explore feasible mechanisms
+
+More details are included in the `README.md` file within the 'example\_output' subdirectory.
+
 ## Features to be Implemented
 Below are the remaining changes to be implemented in the coming versions.
 ### High Priority:

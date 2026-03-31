@@ -63,25 +63,24 @@ while getopts ":s:m:a:l:p:h" opt; do
 	h)
 		cat << EOF
 ##################################################
-###         AutoFlow Bash Script v.0.8.        ###
+###         AutoFlow Bash Script v.0.9.        ###
 ##################################################
 
 The AutoFlow script is intended for automating the
 generation of initial adsorption structures of the
 given adsorbate on the slab of the given element.
 At the end of the operation, the script
-generates structure files for the gaseous molecule,
-the clean slab, and enumerated adsorption
+generates structure files for the gaseous molecule
+, the clean slab, and enumerated adsorption
 configurations, along with the corresponding VASP
 input files to be used for later optimization
 using DFT or otherwise. A hybrid screening scheme
 based on forces is used to initially filter out
 unphysical solutions using a combination of
-Grimme's GFN-FF -> GFN1-xTB methods, and
-alternatively using MACE-MP and/or CHGNet. At the
-end of the screening, a post-analysis procedure is
-done to filter and cluster all of the generated 
-solutions to pick representative structures.
+Grimme's GFN-FF -> GFN1-xTB/MACE-MP/CHGNet. At the
+end of the run, a post-analysis is performed to
+pick representative solution(s) based on the
+chosen method(s).
 
 Usage: $(basename "$0") -s SLAB -m H,K,L -a SMILES
        [-l LATTCONST] [-p PACKING] [-h/--help]
@@ -1413,6 +1412,7 @@ for d in conf_*; do
     cd "$d" || exit 1
     python ../hybrid_screen.py > central.log 2>&1 || { [ -f FAILED ] || echo "Screening failed (bash)" > FAILED; }
     [[ -f gfnff_topo ]] && rm gfnff_topo
+    [[ -f POTCAR ]] && rm POTCAR
   ) &
 
   ((++i))
@@ -1437,17 +1437,15 @@ from ase.data import covalent_radii
 from ase.neighborlist import NeighborList
 from scipy.cluster.hierarchy import fclusterdata
 
-# Overall parameters
-#METHODS = ["GFN1-xTB", "MACE-MP", "CHGNet"]
+# Overall params
 METHODS = ["MACE-MP", "CHGNet"]
 
-MAX_ENERGY_WINDOW = 0.8   # eV (per method)
-CLUSTER_CUTOFF = 1.0      # clustering threshold in feature space
-BOND_SCALE = 1.2          # covalent radii scaling for bond detection
-ENERGY_WEIGHT = 0.1       # scaling factor for energy differences in features
+MAX_ENERGY_WINDOW = 0.8
+CLUSTER_CUTOFF = 0.05   # energy clustering threshold (eV)
+BOND_SCALE = 1.2
 
 
-# Bond graph builder for later reactivity detection
+# Bond graph generation
 def build_bond_graph(atoms, scale=BOND_SCALE):
     cutoffs = [covalent_radii[atoms[i].number] * scale for i in range(len(atoms))]
     nl = NeighborList(cutoffs, self_interaction=False, bothways=True)
@@ -1462,13 +1460,11 @@ def build_bond_graph(atoms, scale=BOND_SCALE):
     return bonds
 
 
-# Load slab metadata
+# Load metadata from enumeration stage
 with open("../surface_atoms.json") as f:
     slab_info = json.load(f)
 n_slab_atoms = slab_info["total_atoms"]
 
-
-# Build reference bond graph from gas-phase adsorbate
 gas_ads = read("../gas/POSCAR")
 n_ads_ref = len(gas_ads)
 initial_bonds = build_bond_graph(gas_ads)
@@ -1477,19 +1473,23 @@ print(f"Reference adsorbate atoms: {n_ads_ref}")
 print(f"Reference bond count: {len(initial_bonds)}")
 
 
-# Reactivity detection helper
+# Reactivity check
 def is_reactive(atoms):
     ads = atoms[n_slab_atoms:]
+
     if len(ads) != n_ads_ref:
         return True
+
     current_bonds = build_bond_graph(ads)
+
     for bond in initial_bonds:
         if bond not in current_bonds:
             return True
+
     return False
 
 
-# Load structures and energies
+# Load solutions
 confs = []
 
 for d in sorted(x for x in os.listdir(".") if x.startswith("conf_")):
@@ -1512,6 +1512,7 @@ for d in sorted(x for x in os.listdir(".") if x.startswith("conf_")):
             continue
 
         atoms = read(xyz_file)
+
         confs.append({
             "conf": d,
             "method": method,
@@ -1522,7 +1523,9 @@ for d in sorted(x for x in os.listdir(".") if x.startswith("conf_")):
 print(f"\nTotal loaded structures: {len(confs)}")
 
 
-# Method-specific energy filtering
+# Energy filtering
+# Reactive/nonreactive solutions are separated to avoid missampling
+# Due to e.g. highly exothermic reactions
 filtered = []
 
 for method in METHODS:
@@ -1530,133 +1533,149 @@ for method in METHODS:
     if not method_confs:
         continue
 
-    energies = np.array([c["energy"] for c in method_confs])
-    emin = energies.min()
-
     for c in method_confs:
-        if c["energy"] - emin <= MAX_ENERGY_WINDOW:
-            filtered.append(c)
+        c["reactive"] = is_reactive(c["atoms"])
+
+    nonreactive = [c for c in method_confs if not c["reactive"]]
+    reactive = [c for c in method_confs if c["reactive"]]
+
+    if nonreactive:
+        emin_nonreact = min(c["energy"] for c in nonreactive)
+        for c in nonreactive:
+            if c["energy"] - emin_nonreact <= MAX_ENERGY_WINDOW:
+                filtered.append(c)
+
+    if reactive:
+        emin_react = min(c["energy"] for c in reactive)
+        for c in reactive:
+            if c["energy"] - emin_react <= MAX_ENERGY_WINDOW:
+                filtered.append(c)
 
 print(f"Number of filtered structures: {len(filtered)}")
+
 if len(filtered) == 0:
     print("No structures survived energy filtering.")
     exit()
 
 
-# Feature construction
-# COM + first 2 heavy atoms vector (with reactive/single-atom fallbacks)
-features = []
-names = []
-
-for c in filtered:
-    atoms = c["atoms"]
-    ads = atoms[n_slab_atoms:]
-    reactive_flag = is_reactive(atoms)
-
-    # Center of mass for translational
-    com = ads.get_center_of_mass()
-
-    # Orientation vector for rotational
-    symbols = ads.get_chemical_symbols()
-    heavy = [i for i, s in enumerate(symbols) if s != "H"]
-
-    if reactive_flag or len(heavy) == 0:
-        v = np.zeros(3)
-    elif len(heavy) == 1:
-        v = ads.positions[heavy[0]] - com
-        norm = np.linalg.norm(v)
-        if norm > 1e-8:
-            v /= norm
-        else:
-            v = np.zeros(3)
-    else:
-        p1 = ads.positions[heavy[0]]
-        p2 = ads.positions[heavy[1]]
-        v = p2 - p1
-        norm = np.linalg.norm(v)
-        if norm > 1e-8:
-            v /= norm
-        else:
-            v = np.zeros(3)
-
-    # Energy weighting
-    method_confs = [fc for fc in filtered if fc["method"] == c["method"]]
-    emin = min(fc["energy"] for fc in method_confs)
-    energy_offset = (c["energy"] - emin) * ENERGY_WEIGHT
-
-    feature = np.concatenate([com + energy_offset, v])
-    features.append(feature)
-    names.append(f"{c['conf']}|{c['method']}")
-
-features = np.vstack(features)
-
-
-# Clustering
-if len(features) == 1:
-    labels = np.array([1])
-else:
-    labels = fclusterdata(features, t=CLUSTER_CUTOFF, criterion="distance")
-
+# Energy-based clustering per method
 clusters = {}
-for name, label in zip(names, labels):
-    clusters.setdefault(int(label), []).append(name)
+cluster_id_counter = 1
+
+for method in METHODS:
+    method_filtered = [c for c in filtered if c["method"] == method]
+    if not method_filtered:
+        continue
+
+    # Feature = energy only
+    features = np.array([[c["energy"]] for c in method_filtered])
+
+    names = [f"{c['conf']}|{c['method']}" for c in method_filtered]
+
+    if len(features) == 1:
+        labels = np.array([1])
+    else:
+        labels = fclusterdata(features, t=CLUSTER_CUTOFF, criterion="distance")
+
+    for name, label in zip(names, labels):
+        global_id = int(cluster_id_counter + int(label) - 1)
+        clusters.setdefault(global_id, []).append(name)
+
+    cluster_id_counter += int(labels.max())
 
 
-# Representative selection
-rep_data = []
+# Organize by method
+method_clusters = {}
+method_reps = {}
 
 for cluster_id, members in clusters.items():
-    best = min(
-        members,
-        key=lambda m: next(
-            c["energy"] for c in filtered
-            if f"{c['conf']}|{c['method']}" == m
+    _, method = members[0].split("|")
+
+    method_clusters.setdefault(method, {})
+    method_clusters[method][str(cluster_id)] = members
+
+
+for method, clusts in method_clusters.items():
+    reps = []
+
+    for cluster_id, members in clusts.items():
+        best = min(
+            members,
+            key=lambda m: next(
+                c["energy"] for c in filtered
+                if f"{c['conf']}|{c['method']}" == m
+            )
         )
-    )
 
-    conf_name, method = best.split("|")
-    entry = next(
-        c for c in filtered
-        if c["conf"] == conf_name and c["method"] == method
-    )
+        conf_name, method_name = best.split("|")
 
-    reactive_flag = is_reactive(entry["atoms"])
+        entry = next(
+            c for c in filtered
+            if c["conf"] == conf_name and c["method"] == method_name
+        )
 
-    rep_data.append({
-        "cluster": cluster_id,
-        "conf": conf_name,
-        "method": method,
-        "energy": entry["energy"],
-        "reactive": reactive_flag
-    })
+        reps.append({
+            "cluster": str(cluster_id),
+            "conf": conf_name,
+            "energy": entry["energy"],
+            "reactive": entry["reactive"]
+        })
+
+    method_reps[method] = reps
 
 
-# Save metadata
+# Find best solution per method
+best_per_method = []
 summary = {
     "n_loaded": len(confs),
     "n_filtered": len(filtered),
-    "n_clusters": len(clusters),
-    "representatives": rep_data,
-    "clusters": clusters
+    "methods": {}
 }
 
+for method in METHODS:
+    method_entries = [c for c in filtered if c["method"] == method]
+    if not method_entries:
+        continue
+
+    nonreactive = [c for c in method_entries if not c["reactive"]]
+    pool = nonreactive if nonreactive else method_entries
+
+    best = min(pool, key=lambda x: x["energy"])
+
+    best_entry = {
+        "conf": best["conf"],
+        "method": best["method"],
+        "energy": best["energy"],
+        "reactive": best["reactive"]
+    }
+
+    best_per_method.append(best_entry)
+
+    summary["methods"][method] = {
+        "n_filtered": len(method_entries),
+        "n_clusters": len(method_clusters.get(method, {})),
+        "clusters": method_clusters.get(method, {}),
+        "representatives": method_reps.get(method, []),
+        "best": best_entry
+    }
+
+
+# Save summary metadata
 with open("ensemble_screening_summary.json", "w") as f:
     json.dump(summary, f, indent=2)
 
 
-# Print summary table
-print("\nTop representative candidates:")
-print("-" * 75)
-print(f"{'Cluster':<8} {'Conf':<10} {'Method':<10} "
-      f"{'Energy (eV)':<15} {'Reactive':<8}")
-print("-" * 75)
+# Print to stdout
+print("\nBest candidate per method:")
+print("-" * 60)
+print(f"{'Conf':<10} {'Method':<10} {'Energy (eV)':<15} {'Reactive':<8}")
+print("-" * 60)
 
-for r in sorted(rep_data, key=lambda x: x["energy"]):
-    print(f"{r['cluster']:<8} {r['conf']:<10} {r['method']:<10} "
+for r in sorted(best_per_method, key=lambda x: x["method"]):
+    print(f"{r['conf']:<10} {r['method']:<10} "
           f"{r['energy']:<15.6f} {str(r['reactive']):<8}")
 
-print("-" * 75)
-print(f"Clusters found: {len(clusters)}")
+print("-" * 60)
 EOF
 
 # Execute post-analysis
