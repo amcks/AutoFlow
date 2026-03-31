@@ -35,13 +35,6 @@ The remaining options are optional:
 - **p**:  Packing/crystal structure type. Must be one of the following: fcc, hcp, bcc, bct. Defaults to fcc when not specified.
 - **h**:  Print this help message and exit. When this option is called, all other options are ignored, and only the help message is printed. Can also be called with --help.
 
-For reference, a set of the example output of a successful run for the test system of methoxy (CH3O\*) adsorbate on an Ag(110) surface is included in the 'example\_output' subdirectory. This set of results was generated using the following command:
-```
-autoflow_v0_8.sh -s Ag -m 1,1,0 -a CO[*] -l 4.13 -p fcc
-```
-
-At the end of the initial optimization, a post-analysis procedure is performed to filter and cluster all the solutions from the different methods on the basis of geometry and energies. While previous versions have the post-analysis script as a separate, standalone module, in the current version, the post-analysis module is integrated into the main script, but the python script used is still printed for the sake of debugging.
-
 ## Example Applications
 Currently, the 'example\_output' subdirectory contains two examples:
 - AutoFlow usage on a single adsorption structure optimization
