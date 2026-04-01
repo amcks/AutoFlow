@@ -38,17 +38,12 @@ while IFS= read -r smiles || [[ -n "$smiles" ]]; do
     cat > "submit.sh" <<EOF
 #!/bin/bash
 
-#SBATCH -p hawkcpu,haswell
+#SBATCH -p partition_name
 #SBATCH -t 10:00:00
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
-#SBATCH -J vasp
 #SBATCH --qos=nogpu
-#SBATCH --job-name="EO_RING_$counter"
-
-source /etc/profile.d/zlmod.sh
-
-ulimit -s unlimited
+#SBATCH --job-name="RING_$counter"
 
 ./autoflow_v0_9.sh -s Ag -m 1,1,1 -a "$smiles" -l 4.13 -p fcc
 
