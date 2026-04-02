@@ -17,7 +17,7 @@ At the end of which, an environment called 'autoflow' will be created, which is 
 conda activate autoflow
 ```
 
-The enumeration of the adsorptin sites relies on the usage of [DockOnSurf](https://gitlab.com/lch_interfaces/dockonsurf). Users will need to follow the installation steps outlined in their repository/documentation, but their dependencies have been covered by the provided yaml file. Note: **THIS STEP IS MANDATORY**.
+The enumeration of the adsorption sites relies on the usage of [DockOnSurf](https://gitlab.com/lch_interfaces/dockonsurf). Users will need to follow the installation steps outlined in their repository/documentation, but their dependencies have been covered by the provided yaml file. Note: **THIS STEP IS MANDATORY**.
 
 ## Usage
 The primary script to be executed is 'autoflow\_\<version\>.sh'. In bash terms, the usage of this script is as follows:
