@@ -45,13 +45,13 @@ More details are included in the `README.md` file within the 'example\_output' s
 ## Features to be Implemented
 Below are the remaining changes to be implemented in the coming versions.
 ### High Priority:
-- Expand extent of user control in getopts: Calculator control, DockOnSurf parameters, Parallelization.
+- Fine tune MLP with surface/adsorbate data to ensure relevance.
 
 ### Medium Priority:
 - Implementation of adsorption *pattern* enumeration for higher coverage cases.
 - Implementation of coarse NMA & thermodynamics-based corrections.
 - Add functionality to import user-supplied surface slabs instead of having to generate a surface via ASE every time.
-- Integrate post-analysis script into main script operation. 
+- Expand extent of user control in getopts: Calculator control, DockOnSurf parameters, Parallelization.
 
 ### Low Priority:
 - Refactoring to full Python script can create considerable speedup, especially in terms of I/O or RAM handling, as well as, possibly, JIT compilation.
