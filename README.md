@@ -1,57 +1,98 @@
 # AutoFlow
-The AutoFlow script is intended for automating the generation and enumeration of initial adsorption structures of the given adsorbate on the surface slab of the given element.
 
-The script generates structure files for the gaseous molecule, the clean slab, and enumerated adsorption configurations, along with the corresponding VASP input files to be used for later optimization using DFT or otherwise. A hybrid screening scheme based on forces is used to initially filter out unphysical solutions using a combination of GFN-FF for initialization, followed by structural optimization with [GFN1-xTB](https://xtb-python.readthedocs.io/en/latest/ase-calculator.html), [MACE-MP](https://github.com/acesuit/mace), [CHGNet](https://github.com/CederGroupHub/chgnet/tree/e2a2b82bf2c64e5a3d39cd75d0addfa864a2771a), or any other calculators accessible via the Atomic Simulation Environment \([ASE](https://ase-lib.org/ase/calculators/calculators.html)\) package. Post-analysis is then be performed to cluster the configurations after optimization using all the methods, and representative low-energy structures from each cluster can be selected as initial structures for subsequent, more computationally-exhaustive calculations.
+**AutoFlow** is an automated Python pipeline for initial adsorbate structure generation, site enumeration, and multi-tier MLIP screening on metallic surface slabs.
 
-Although the script is primarily written and executed in bash script, the bash script portions act as a wrapper, while the main logic of the operations is written in procedurally-generated Python script blocks. This reflects the nature of the project's evolution, which started as a simpler bash script, with plans on fully refactoring it to Python in later versions.
+It orchestrates the workflow from gas-phase SMILES processing and surface slab construction down to parallel MLIP relaxations (GFN-FF / MACE), structure clustering, and candidate selection for single-point DFT calculations.
 
-## Installation & Dependencies: 
+---
 
-The complete list of dependencies is listed in the included *AF_env.yaml* file, allowing for installation via conda.
-```
-conda env create -f AF_env.yml
-```
+## Features
 
-At the end of which, an environment called 'autoflow' will be created, which is activated automatically in the script, or can be activated manually via the following command.
-```
+- **Automated Structure Generation**: Generates gas-phase adsorbate geometries from SMILES and metallic surface slabs with defined Miller indices.
+- **Site Enumeration**: Direct placement for monoatomic species and seamless integration with DockOnSurf for polyatomic molecules.
+- **Parallel MLIP Relaxation**: Multi-threaded structure relaxations using GFN-FF prerelaxation and fine-tuned MACE potentials.
+- **Ensemble Post-Analysis**: Hierarchical clustering, reactivity/adsorption filtering, and geometric disagreement analysis.
+- **DFT Dataset Preparation**: Automatically exports top representative candidates into VASP-ready calculation directories.
+
+---
+
+## Installation & Prerequisites
+
+### 1. Prerequisites
+AutoFlow requires `xtb` for GFN-FF prerelaxation and `dockonsurf.py` for site enumeration.
+
+```bash
+# Create base Conda environment with compiled binaries
+conda create -n autoflow -c conda-forge python=3.10 xtb
 conda activate autoflow
 ```
 
-The enumeration of the adsorptin sites relies on the usage of [DockOnSurf](https://gitlab.com/lch_interfaces/dockonsurf). Users will need to follow the installation steps outlined in their repository/documentation, but their dependencies have been covered by the provided yaml file. Note: **THIS STEP IS MANDATORY**.
+**Note**: [DockOnSurf](https://gitlab.com/lch_interfaces/dockonsurf) must be installed and accessible in your system `$PATH`.
+
+### 2. Installing AutoFlow
+Clone the repository and install with *pip* in editable mode:
+
+```bash
+git clone https://github.com/amcks/AutoFlow
+cd autoflow
+pip install -e .
+```
+
+## Environment Setup
+Configure paths for VASP pseudopotentials and MACE model via environment variables in your `./bashrc` or within your SLURM submission scripts:
+
+```bash
+export VASP_PP_PATH="/path/to/vasp/potentials/PBE.54"
+export MACE_MODEL_PATH="/path/to/mace_adsorption_ft_cpu.model"
+```
 
 ## Usage
-The primary script to be executed is 'autoflow\_\<version\>.sh'. In bash terms, the usage of this script is as follows:
+AutoFlow provides a command-line interface driven by subcommands.
+
+To view global options and available commands:
+```bash
+autoflow --help
 ```
-Usage: autoflow_<version>.sh -s SLAB -m H,K,L -a SMILES [-l LATTCONST] [-p PACKING] [-h/--help]
+
+### 1.Running Screening Pipeline
+Execute adsorption mode enumeration, structure generation, screening, and post-analysis:
+```bash
+autoflow run -s Ag -m 1,1,1 -a "C(=O)C" -l 4.13 -p fcc -j 4
 ```
 
-The first three options are mandatory, and the script will not execute unless they are supplied:
-- **s**:  Slab element (e.g. Cu, Pt).
-- **m**:  Comma-separated Miller indices (e.g. 1,1,1).
-- **a**:  Adsorbate SMILES string. Where applicable, bonds formed during adsorption should be specified by a dummy atom \[\*\] (e.g. CO\[\*\] for methoxy, C=C for ethylene, c1ccccc1 for benzene).
+To automatically generate VASP DFT inputs of the representative structure(s) for further construction of datasets upon completion of the MLIP screening:
+```bash
+autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
+```
 
-The remaining options are optional:
-- **l**:  Lattice constant. Defaults to ASE's database of lattice constants when not specified.
-- **p**:  Packing/crystal structure type. Must be one of the following: fcc, hcp, bcc, bct. Defaults to fcc when not specified.
-- **h**:  Print this help message and exit. When this option is called, all other options are ignored, and only the help message is printed. Can also be called with --help.
+**Available Options**:
+-`-s, --slab`: Surface slab element (e.g., Ag, Cu, Pt).
+-`-m, --miller`: Comma-separated Miller indices (e.g., 1,1,1).
+-`-a, --adsorbate`: Adsorbate SMILES string (e.g., C(=O)C).
+-`-l, --lattconst`: Optional lattice constant (Å).
+-`-p, --packing`: Crystal structure (fcc, hcp, bcc, bct). Default: fcc.
+-`-j, --jobs`: Maximum parallel screening processes. Default: 4.
+-`--generate-dft`: Prepare DFT input directories in screening/DFT/ after screening.
 
-## Example Applications
-Currently, the 'example\_output' subdirectory contains two examples:
-- AutoFlow usage on a single adsorption structure optimization
-- Integration with the Rule Input Network Generator \([RING](https://doi.org/10.1016/j.compchemeng.2012.06.008)\) workflow to explore feasible mechanisms
+### 2.Standalone DFT Preparation
+If MLIP screening was completed previously, VASP DFT input data can be generated separately:
+```bash
+autoflow prep-dft -d ./screening
+```
 
-More details are included in the `README.md` file within the 'example\_output' subdirectory.
-
-## Features to be Implemented
-Below are the remaining changes to be implemented in the coming versions.
-### High Priority:
-- Expand extent of user control in getopts: Calculator control, DockOnSurf parameters, Parallelization.
-
-### Medium Priority:
-- Implementation of adsorption *pattern* enumeration for higher coverage cases.
-- Implementation of coarse NMA & thermodynamics-based corrections.
-- Add functionality to import user-supplied surface slabs instead of having to generate a surface via ASE every time.
-- Integrate post-analysis script into main script operation. 
-
-### Low Priority:
-- Refactoring to full Python script can create considerable speedup, especially in terms of I/O or RAM handling, as well as, possibly, JIT compilation.
+## Output Directory Structure
+Executing `autoflow run` creates the following directory layout:
+```
+.
+├── gas/                     # Gas-phase POSCAR and meta.xyz
+├── slab/                    # Clean surface POSCAR
+└── screening/               # Enumerated configurations (conf_0, conf_1, ...)
+    ├── conf_0               # Relaxed configuration structures
+    ├── conf_1 
+    ├── surface_atoms.json   # Surface site metadata
+    ├── ensemble_screening_summary.json
+    ├── dft_selection.json
+    └── DFT/                 # Generated if --generate-dft or prep-dft is called
+        ├── 0/               # VASP input set (POSCAR, INCAR, KPOINTS, POTCAR, submit.sh)
+        └── 1/
+```
