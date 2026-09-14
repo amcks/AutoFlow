@@ -30,7 +30,7 @@ conda activate autoflow
 **Note**: [DockOnSurf](https://gitlab.com/lch_interfaces/dockonsurf) must be installed and accessible in your system `$PATH`.
 
 ### 2. Installing AutoFlow
-Clone the repository and install with *pip* in editable mode:
+After **fulfilling the prerequisites** and **activating the environment**, clone the repository and install with `pip` in editable mode:
 
 ```bash
 git clone https://github.com/amcks/AutoFlow
