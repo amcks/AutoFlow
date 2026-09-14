@@ -34,7 +34,7 @@ Clone the repository and install with *pip* in editable mode:
 
 ```bash
 git clone https://github.com/amcks/AutoFlow
-cd autoflow
+cd AutoFlow
 pip install -e .
 ```
 
@@ -66,13 +66,13 @@ autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
 ```
 
 **Available Options**:
--`-s, --slab`: Surface slab element (e.g., Ag, Cu, Pt).
--`-m, --miller`: Comma-separated Miller indices (e.g., 1,1,1).
--`-a, --adsorbate`: Adsorbate SMILES string (e.g., C(=O)C).
--`-l, --lattconst`: Optional lattice constant (Å).
--`-p, --packing`: Crystal structure (fcc, hcp, bcc, bct). Default: fcc.
--`-j, --jobs`: Maximum parallel screening processes. Default: 4.
--`--generate-dft`: Prepare DFT input directories in screening/DFT/ after screening.
+- `-s, --slab`: Surface slab element (e.g., Ag, Cu, Pt).
+- `-m, --miller`: Comma-separated Miller indices (e.g., 1,1,1).
+- `-a, --adsorbate`: Adsorbate SMILES string (e.g., C(=O)C).
+- `-l, --lattconst`: Optional lattice constant (Å).
+- `-p, --packing`: Crystal structure (fcc, hcp, bcc, bct). Default: fcc.
+- `-j, --jobs`: Maximum parallel screening processes. Default: 4.
+- `--generate-dft`: Prepare DFT input directories in screening/DFT/ after screening.
 
 ### 2.Standalone DFT Preparation
 If MLIP screening was completed previously, VASP DFT input data can be generated separately:
