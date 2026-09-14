@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoflow"
+version = "1.0.0"
+description = "Automated surface adsorption screening and fine-tuning dataset generation"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Adhika Setiawan", email = "adhika.n.suryatin@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+# Core runtime dependencies translated from environment.yml
+dependencies = [
+    "click>=8.0",
+    "python-dotenv",
+    "numpy>=1.16.6",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "networkx>=2.4",
+    "cffi",
+    "hdbscan",
+    "pymatgen",
+    "ase",
+    "spglib",
+    "rdkit",
+    "tblite",
+    "pycp2k",
+    "python-daemon",
+    "mace-torch",
+    "chgnet",
+]
+
+# Optional extras (e.g. pip install -e ".[dev]")
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+]
+
+# Expose CLI command: 'autoflow' -> calls main() in autoflow/cli.py
+[project.scripts]
+autoflow = "autoflow.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
