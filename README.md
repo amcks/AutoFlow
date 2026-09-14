@@ -49,9 +49,10 @@ export MACE_MODEL_PATH="/path/to/mace_adsorption_ft_cpu.model"
 ## Usage
 AutoFlow provides a command-line interface driven by subcommands.
 
-To view global options and available commands:
+To view options and available commands, include the `--help` option at either the global or subcommand level:
 ```bash
 autoflow --help
+autoflow run --help
 ```
 
 ### 1.Running Screening Pipeline
