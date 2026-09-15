@@ -69,11 +69,14 @@ autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
 **Available Options**:
 - `-s, --slab`: Surface slab element (e.g., Ag, Cu, Pt).
 - `-m, --miller`: Comma-separated Miller indices (e.g., 1,1,1).
+- `--poscar`: Path to optional user-supplied POSCAR file.
 - `-a, --adsorbate`: Adsorbate SMILES string (e.g., C(=O)C).
 - `-l, --lattconst`: Optional lattice constant (Å).
 - `-p, --packing`: Crystal structure (fcc, hcp, bcc, bct). Default: fcc.
 - `-j, --jobs`: Maximum parallel screening processes. Default: 4.
 - `--generate-dft`: Prepare DFT input directories in screening/DFT/ after screening.
+
+**Note**: Usage of `-s` & `-m` options are mutually exclusive with the `--poscar` option.
 
 ### 2.Standalone DFT Preparation
 If MLIP screening was completed previously, VASP DFT input data can be generated separately:

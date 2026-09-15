@@ -4,11 +4,11 @@ from typing import Tuple, Optional, Dict, Any, List
 import numpy as np
 import spglib
 from scipy.spatial import Delaunay
-from itertools import combinations
+from scipy.cluster.hierarchy import linkage, fcluster
 from ase.build import bulk, surface
 from ase.constraints import FixAtoms
 from ase.neighborlist import NeighborList
-from ase.io import write
+from ase.io import read, write
 from matplotlib.path import Path as MPLPath
 
 
@@ -52,8 +52,10 @@ def triangle_max_edge(tri_atoms: Tuple[int, ...], positions: np.ndarray, max_edg
     return max(dists) <= max_edge
 
 
-def classify_fcc_hcp(tri_atoms: Tuple[int, ...], positions: np.ndarray, sub_positions: np.ndarray, xy_tol: float = 0.25) -> str:
+def classify_fcc_hcp(tri_atoms: Tuple[int, ...], positions: np.ndarray, sub_positions: np.ndarray, xy_tol: float = 0.35) -> str:
     """Classify threefold site as HCP or FCC based on subsurface atom proximity."""
+    if len(sub_positions) == 0:
+        return "fcc"  # Fallback default if single-layer terrace or missing subsurface
     tri_xy = positions[list(tri_atoms), :2]
     centroid_xy = tri_xy.mean(axis=0)
     sub_xy = sub_positions[:, :2]
@@ -85,6 +87,9 @@ def build_terrace_adjacency(terrace: List[int], positions: np.ndarray) -> Dict[i
         for j in range(i + 1, len(coords_2d)):
             d = np.linalg.norm(coords_2d[i] - coords_2d[j])
             dists.append(d)
+
+    if not dists:
+        return {}
 
     dists = np.sort(dists)
     unique = np.unique(np.round(dists, 3))
@@ -163,78 +168,72 @@ def prune_unique(candidates: List[Tuple[Tuple[int, ...], Tuple[int, ...]]]) -> L
     return list(unique_dict.values())
 
 
-# Main Conversion Logic
-def generate_slab_surface(
-    element: str,
-    miller: Tuple[int, int, int],
+def get_layer_grouping(heights: np.ndarray, max_layer_span: float = 0.8) -> Tuple[np.ndarray, np.ndarray]:
+    """Hierarchical 1D clustering on Z-heights to extract discrete atomic layers."""
+    heights_2d = heights.reshape(-1, 1)
+    Z = linkage(heights_2d, method='complete')
+    clusters = fcluster(Z, t=max_layer_span, criterion='distance')
+    
+    unique_clusters = np.unique(clusters)
+    layer_means = np.array([np.mean(heights[clusters == c]) for c in unique_clusters])
+    
+    # Sort cluster IDs by layer elevation ascending
+    sorted_indices = np.argsort(layer_means)
+    layer_means = layer_means[sorted_indices]
+    
+    # Remap cluster labels from bottom (1) to top (N)
+    label_map = {old_label: new_label + 1 for new_label, old_label in enumerate(unique_clusters[sorted_indices])}
+    remapped_clusters = np.array([label_map[c] for c in clusters])
+    
+    return remapped_clusters, layer_means
+
+
+# Core Processing Engine
+def analyze_slab(
+    slab: Any,
+    nn_dist: float,
     output_dir: Path,
-    packing: str = "fcc",
-    lattconst: Optional[float] = None,
-    target_thickness: float = 6.0,
-    min_lateral_size: float = 8.0,
-    vacuum: float = 15.0,
+    metadata_base: Dict[str, Any],
+    freeze_bottom: bool = False,
     freeze_fraction: float = 0.4
 ) -> Dict[str, Any]:
-    """Generates POSCAR and metadata dictionary for a metallic surface slab."""
-
-    bulk_met = bulk(element, packing, cubic=True) if lattconst is None else bulk(element, packing, a=lattconst, cubic=True)
-
-    layers = 1
-    while True:
-        slab = surface(bulk_met, miller, layers=layers)
-        slab.center(vacuum=vacuum, axis=2)
-        normal = np.cross(slab.get_cell()[0], slab.get_cell()[1])
-        normal /= np.linalg.norm(normal)
-        heights = slab.get_positions() @ normal
-        if (heights.max() - heights.min()) >= target_thickness:
-            break
-        layers += 1
-
-    cell = slab.get_cell()
-    rx = max(1, int(np.ceil(min_lateral_size / np.linalg.norm(cell[0]))))
-    ry = max(1, int(np.ceil(min_lateral_size / np.linalg.norm(cell[1]))))
-    slab = slab.repeat((rx, ry, 1))
-    slab.set_pbc((True, True, True))
-
+    """Enumerates surface sites directly on an ASE Atoms object."""
     positions = slab.get_positions()
     positions_frac = slab.get_scaled_positions()
     natoms = len(slab)
-    heights = positions @ normal
+    heights = positions[:, 2]  # Direct Z-coordinate height assumption
     max_height = np.max(heights)
 
-    # Layer grouping
-    layer_tol = 0.3
-    sorted_heights = np.sort(heights)
-    height_layers = []
-    for h in sorted_heights:
-        if not height_layers or abs(h - height_layers[-1][0]) >= layer_tol:
-            height_layers.append([h])
-        else:
-            height_layers[-1].append(h)
+    # 1D Hierarchical Clustering for Layer Identification
+    clusters, layer_means = get_layer_grouping(heights, max_layer_span=0.8)
+    n_layers = len(layer_means)
 
-    layer_means = np.array([np.mean(l) for l in height_layers])
-    layer_means.sort()
-
-    # Freeze bottom layers
-    n_freeze = int(np.ceil(freeze_fraction * len(layer_means)))
-    bottom_cut = layer_means[n_freeze - 1]
-    frozen_mask = heights < (bottom_cut + 1e-3)
-    slab.set_constraint(FixAtoms(mask=frozen_mask))
+    # Freeze bottom layers if requested or missing constraints
+    if freeze_bottom and not slab.constraints:
+        n_freeze = int(np.ceil(freeze_fraction * n_layers))
+        frozen_clusters = set(range(1, n_freeze + 1))
+        frozen_mask = np.isin(clusters, list(frozen_clusters))
+        slab.set_constraint(FixAtoms(mask=frozen_mask))
+    else:
+        frozen_mask = np.array([False] * natoms)
+        if slab.constraints:
+            for constraint in slab.constraints:
+                if isinstance(constraint, FixAtoms):
+                    frozen_mask[constraint.index] = True
+                    #frozen_mask |= constraint.index
 
     # Neighbor calculations & undercoordination
-    bulk_dists = [bulk_met.get_distance(i, j, mic=True) for i in range(len(bulk_met)) for j in range(i + 1, len(bulk_met))]
-    nn_dist = np.min(bulk_dists)
     cutoff = 1.25 * nn_dist
     nl = NeighborList([cutoff] * natoms, self_interaction=False, bothways=True)
     nl.update(slab)
 
     coordination = np.array([len(nl.get_neighbors(i)[0]) for i in range(natoms)])
     bulk_coord = int(np.percentile(coordination, 90))
-    surface_atoms_all = [i for i in range(natoms) if coordination[i] < bulk_coord and abs(heights[i] - max_height) < 2.0]
+    surface_atoms_all = [i for i in range(natoms) if coordination[i] < bulk_coord and abs(heights[i] - max_height) < 2.5]
 
     # Symmetry setup
     sym_data = spglib.get_symmetry_dataset((slab.get_cell(), positions_frac, slab.get_atomic_numbers()), symprec=1e-3)
-    equiv = sym_data.equivalent_atoms
+    equiv = sym_data.equivalent_atoms if sym_data is not None else list(range(natoms))
 
     unique_top = {}
     for i in surface_atoms_all:
@@ -248,7 +247,7 @@ def generate_slab_surface(
         np.linalg.norm(positions[i] - positions[j])
         for i in range(natoms) for j in nl.get_neighbors(i)[0] if i < j
     ]
-    bridge_cutoff = 1.2 * np.min(all_distances)
+    bridge_cutoff = 1.2 * (np.min(all_distances) if all_distances else nn_dist)
 
     bridge_sites = []
     for i in surface_atoms_all:
@@ -269,25 +268,23 @@ def generate_slab_surface(
     # Threefold and Fourfold logic
     max_edge = 1.15 * nn_dist
 
-    top_layer_idx = [i for i in range(natoms) if heights[i] > (layer_means[-1] - layer_tol)]
-    bulk_top_coord = int(np.median([coordination[i] for i in top_layer_idx]))
+    # Select top layer atoms via cluster assignment
+    top_cluster_id = n_layers
+    top_layer_idx = np.where(clusters == top_cluster_id)[0]
+    bulk_top_coord = int(np.median([coordination[i] for i in top_layer_idx])) if len(top_layer_idx) > 0 else 0
     valid_top_atoms = [i for i in top_layer_idx if coordination[i] == bulk_top_coord]
 
-    # Group top atoms by terrace layer
-    terrace_groups = []
-    for h, idx in sorted(zip(heights[valid_top_atoms], valid_top_atoms)):
-        if not terrace_groups:
-            terrace_groups.append([idx])
-        elif abs(h - heights[terrace_groups[-1][0]]) < layer_tol:
-            terrace_groups[-1].append(idx)
-        else:
-            terrace_groups.append([idx])
+    # Group top atoms into terraces
+    terrace_groups = [valid_top_atoms] if valid_top_atoms else []
 
     threefold_candidates = []
     fourfold_candidates = []
 
     for terrace in terrace_groups:
         terrace_coords = positions[terrace]
+        if len(terrace) < 3:
+            continue
+
         centroid = terrace_coords.mean(axis=0)
         cov = (terrace_coords - centroid).T @ (terrace_coords - centroid)
         eigvals, eigvecs = np.linalg.eigh(cov)
@@ -319,7 +316,7 @@ def generate_slab_surface(
                             quad = tuple(sorted([i, j, k, l]))
                             if crosses_pbc(quad, positions_frac, threshold=0.8):
                                 continue
-                            if not is_rectangular_ring(quad, positions, heights, layer_tol):
+                            if not is_rectangular_ring(quad, positions, heights, layer_tol=0.8):
                                 continue
                             if contains_internal_atom(quad, terrace, positions):
                                 continue
@@ -333,10 +330,7 @@ def generate_slab_surface(
         and triangle_max_edge(tri_atoms, positions, max_edge)
     ]
 
-    sub_layer_idx = [
-        i for i in range(natoms)
-        if heights[i] > (layer_means[-2] - layer_tol) and heights[i] < (layer_means[-1] - layer_tol)
-    ]
+    sub_layer_idx = np.where(clusters == (n_layers - 1))[0] if n_layers > 1 else np.array([], dtype=int)
     sub_positions = positions[sub_layer_idx]
 
     threefold_types = [classify_fcc_hcp(tri, positions, sub_positions) for tri in filtered_threefolds]
@@ -365,13 +359,10 @@ def generate_slab_surface(
 
     fourfold_sites_pruned = list(fourfold_unique.values())[:1]
 
-    # Format output metadata
+    # Assemble metadata dictionary
     metadata = {
-        "element": element,
-        "packing": packing,
-        "miller": list(miller),
-        "requested_layers": int(layers),
-        "detected_layer_count": int(len(layer_means)),
+        **metadata_base,
+        "detected_layer_count": int(n_layers),
         "cell": slab.get_cell().tolist(),
         "total_atoms": int(natoms),
         "surface_atoms": [int(i) for i in pruned_surface_atoms],
@@ -388,3 +379,123 @@ def generate_slab_surface(
     (output_dir.parent / "surface_atoms.json").write_text(json.dumps(metadata, indent=2))
 
     return metadata
+
+
+# High-Level Entry Points
+def generate_slab_surface(
+    element: str,
+    miller: Tuple[int, int, int],
+    output_dir: Path,
+    packing: str = "fcc",
+    lattconst: Optional[float] = None,
+    target_thickness: float = 6.0,
+    min_lateral_size: float = 8.0,
+    vacuum: float = 15.0,
+    freeze_fraction: float = 0.4
+) -> Dict[str, Any]:
+    """Generates POSCAR and metadata dictionary for a metallic surface slab."""
+    bulk_met = bulk(element, packing, cubic=True) if lattconst is None else bulk(element, packing, a=lattconst, cubic=True)
+
+    layers = 1
+    while True:
+        slab = surface(bulk_met, miller, layers=layers)
+        slab.center(vacuum=vacuum, axis=2)
+        normal = np.cross(slab.get_cell()[0], slab.get_cell()[1])
+        normal /= np.linalg.norm(normal)
+        heights = slab.get_positions() @ normal
+        if (heights.max() - heights.min()) >= target_thickness:
+            break
+        layers += 1
+
+    cell = slab.get_cell()
+    rx = max(1, int(np.ceil(min_lateral_size / np.linalg.norm(cell[0]))))
+    ry = max(1, int(np.ceil(min_lateral_size / np.linalg.norm(cell[1]))))
+    slab = slab.repeat((rx, ry, 1))
+    slab.set_pbc((True, True, True))
+
+    bulk_dists = [bulk_met.get_distance(i, j, mic=True) for i in range(len(bulk_met)) for j in range(i + 1, len(bulk_met))]
+    nn_dist = np.min(bulk_dists)
+
+    metadata_base = {
+        "element": element,
+        "packing": packing,
+        "miller": list(miller),
+        "requested_layers": int(layers),
+    }
+
+    return analyze_slab(slab, nn_dist, output_dir, metadata_base, freeze_bottom=True, freeze_fraction=freeze_fraction)
+
+
+def load_slab_from_poscar(
+    poscar_path: Path,
+    output_dir: Path,
+    freeze_bottom: bool = False,
+    freeze_fraction: float = 0.4
+) -> Dict[str, Any]:
+    """Loads external POSCAR and performs surface site enumeration."""
+    slab = read(poscar_path)
+
+    # 1. Estimate nearest-neighbor distance safely across mixed-element systems
+    positions = slab.get_positions()
+    z_min = positions[:, 2].min()
+    bulk_like_mask = positions[:, 2] < (z_min + 3.5)
+
+    if np.sum(bulk_like_mask) > 1:
+        dists = slab.get_all_distances(mic=True)[bulk_like_mask][:, bulk_like_mask]
+        nn_dist = np.min(dists[dists > 0.5])
+    else:
+        # Fallback to global minimum pairwise distance
+        dists = slab.get_all_distances(mic=True)
+        nn_dist = np.min(dists[dists > 0.5])
+
+    # 2. Preserve POSCAR elemental order (DO NOT use set())
+    # dict.fromkeys preserves insertion order while removing duplicates
+    ordered_elements = list(dict.fromkeys(slab.get_chemical_symbols()))
+
+    metadata_base = {
+        "source_file": str(poscar_path),
+        "element": ordered_elements,
+        "miller": None,
+        "requested_layers": None,
+    }
+
+    return analyze_slab(
+        slab, 
+        nn_dist, 
+        output_dir, 
+        metadata_base, 
+        freeze_bottom=freeze_bottom, 
+        freeze_fraction=freeze_fraction
+    )
+
+
+#def load_slab_from_poscar(
+#    poscar_path: Path,
+#    output_dir: Path,
+#    freeze_bottom: bool = False,
+#    freeze_fraction: float = 0.4
+#) -> Dict[str, Any]:
+#    """Loads external POSCAR and performs surface site enumeration."""
+#    slab = read(poscar_path)
+#    
+#    # Estimate nearest-neighbor distance from bottom/bulk-like portion of the slab
+#    positions = slab.get_positions()
+#    z_min = positions[:, 2].min()
+#    bulk_like_mask = positions[:, 2] < (z_min + 3.5)
+#    
+#    if np.sum(bulk_like_mask) > 1:
+#        dists = slab.get_all_distances(mic=True)[bulk_like_mask][:, bulk_like_mask]
+#        nn_dist = np.min(dists[dists > 0.5])
+#    else:
+#        # Fallback to global minimum pairwise distance
+#        dists = slab.get_all_distances(mic=True)
+#        nn_dist = np.min(dists[dists > 0.5])
+#
+#    metadata_base = {
+#        "source_file": str(poscar_path),
+#        "element": list(set(slab.get_chemical_symbols())),
+#        "miller": None,
+#        "requested_layers": None,
+#    }
+#
+#    return analyze_slab(slab, nn_dist, output_dir, metadata_base, freeze_bottom=freeze_bottom, freeze_fraction=freeze_fraction)
