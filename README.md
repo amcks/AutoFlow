@@ -10,7 +10,7 @@ It orchestrates the workflow from gas-phase SMILES processing and surface slab c
 
 - **Automated Structure Generation**: Generates gas-phase adsorbate geometries from SMILES and metallic surface slabs with defined Miller indices.
 - **Site Enumeration**: Direct placement for monoatomic species and seamless integration with DockOnSurf for polyatomic molecules.
-- **Parallel MLIP Relaxation**: Multi-threaded structure relaxations using GFN-FF prerelaxation and fine-tuned MACE potentials.
+- **Parallel MLIP Relaxation**: Multi-threaded MLIP structure relaxations using FIRE prerelaxation and LBFGS main optimization.
 - **Ensemble Post-Analysis**: Hierarchical clustering, reactivity/adsorption filtering, and geometric disagreement analysis.
 - **DFT Dataset Preparation**: Automatically exports top representative candidates into VASP-ready calculation directories.
 
@@ -19,11 +19,11 @@ It orchestrates the workflow from gas-phase SMILES processing and surface slab c
 ## Installation & Prerequisites
 
 ### 1. Prerequisites
-AutoFlow requires `xtb` for GFN-FF prerelaxation and `dockonsurf.py` for site enumeration.
+On top of the dependencies installed via pip, AutoFlow also requires `dockonsurf.py` for site enumeration.
 
 ```bash
-# Create base Conda environment with compiled binaries
-conda create -n autoflow -c conda-forge python=3.10 xtb
+# Create base Conda environment
+conda create -n autoflow python=3.10
 conda activate autoflow
 ```
 

@@ -13,13 +13,15 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
-def run_single_relaxation(conf_dir: Path, model_path: Path) -> Optional[Dict[str, Any]]:
-    """Runs GFN-FF prerelaxation followed by MACE-FT relaxation for a single configuration directory."""
+def run_single_relaxation(
+        conf_dir: Path,
+        model_path: Path
+        ) -> Optional[Dict[str, Any]]:
+    """Runs FIRE prerelaxation followed by LBFGS relaxation for a single configuration directory."""
     poscar_path = conf_dir / "POSCAR"
     surface_json = conf_dir.parent / "surface_atoms.json"
     
     if not poscar_path.exists() or not surface_json.exists():
-        print("here")
         return None
 
     atoms = read(poscar_path)
@@ -32,33 +34,39 @@ def run_single_relaxation(conf_dir: Path, model_path: Path) -> Optional[Dict[str
     atoms.set_constraint(FixAtoms(mask=~mask))
 
     try:
-        # Pre-relaxation with GFN-FF
-        atoms.set_pbc(False)
-        atoms.calc = XTB(method="GFN-FF", charge=0, spin=0, maxiter=250, electronic_temperature=3000)
+        # Pre-relaxation with FIRE
+        mace_calc = MACECalculator(
+                model_paths=str(model_path),
+                device="cpu",
+                default_dtype="float64"
+                )
+        atoms.calc = mace_calc
+
+        # Stage 1: Damped FIRE pre-relaxation to filter high-energy structures
         opt_fire = FIRE(atoms, logfile=str(conf_dir / "prerun.log"))
-        opt_fire.run(fmax=2, steps=10)
+        opt_fire.run(fmax=0.2, steps=40)
         
-        atoms_relaxed = atoms.copy()
-        atoms_relaxed.set_pbc(True)
+        # Stage 2: Main LBFGS relaxation for tight local convergence
+        opt_lbfgs = LBFGS(atoms, logfile=str(conf_dir / "MACE-FT.log"))
+        converged = opt_lbfgs.run(fmax=0.05, steps=150)
 
-        # Main Ensemble Relaxation (MACE-FT)
-        mace_calc = MACECalculator(model_paths=str(model_path), device="cpu", default_dtype="float64")
-        atoms_relaxed.calc = mace_calc
+        energy = float(atoms.get_potential_energy())
+        max_force = float(np.linalg.norm(atoms.get_forces(), axis=1).max())
+
+        atoms.info["method"] = "MACE-FT"
+        atoms.info["energy"] = energy
+        atoms.info["max_force"] = max_force
+        atoms.info["converged"] = converged
+        atoms.calc = None
+
+        write(conf_dir / "relaxed_MACE-FT.xyz", atoms)
         
-        opt_lbfgs = LBFGS(atoms_relaxed, logfile=str(conf_dir / "MACE-FT.log"))
-        opt_lbfgs.run(fmax=0.2, steps=100)
-
-        energy = float(atoms_relaxed.get_potential_energy())
-        max_force = float(np.linalg.norm(atoms_relaxed.get_forces(), axis=1).max())
-
-        atoms_relaxed.info["method"] = "MACE-FT"
-        atoms_relaxed.info["energy"] = energy
-        atoms_relaxed.info["max_force"] = max_force
-        atoms_relaxed.calc = None
-
-        write(conf_dir / "relaxed_MACE-FT.xyz", atoms_relaxed)
-        
-        res = [{"method": "MACE-FT", "energy": energy, "max_force": max_force}]
+        res = [{
+            "method": "MACE-FT",
+            "energy": energy,
+            "max_force": max_force,
+            "converged": bool(converged)
+            }]
         (conf_dir / "ensemble_screen.json").write_text(json.dumps(res, indent=2))
         
         del mace_calc
