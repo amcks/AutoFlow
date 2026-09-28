@@ -6,7 +6,7 @@ from ase.io import read
 
 from autoflow.core.config import DEFAULT_VASP_POTENTIAL_PATH, DEFAULT_MACE_PATH, GAS_INCAR_TEMPLATE, SLAB_INCAR_TEMPLATE, SLURM_SCRIPT
 from autoflow.core.utils import build_potcar, write_kpoints
-from autoflow.generators.gas import generate_gas_phase
+from autoflow.generators.gas import generate_gas_phase, load_gas_from_poscar
 from autoflow.generators.inputs import generate_dockonsurf_input, generate_monoatomic_configurations
 from autoflow.generators.slab import generate_slab_surface, load_slab_from_poscar
 from autoflow.screening.post_analysis import run_post_analysis
@@ -18,7 +18,10 @@ def run_autoflow_pipeline(
     max_parallel_jobs: int,
     slab_element: str | None = None,
     miller: tuple[int, int, int] | None = None,
-    poscar_path: Path | None = None,
+    poscar_slab: Path | None = None,
+    poscar_gas: Path | None = None,
+    site_slab: list[int] | None = None,
+    site_gas: list[int] | None = None,
     latt_const: float | None = None,
     packing: str = "fcc",
     vasp_potential_path: Path = DEFAULT_VASP_POTENTIAL_PATH,
@@ -30,7 +33,21 @@ def run_autoflow_pipeline(
     screening_dir = work_dir / "screening"
 
     # 1. Gas Phase Stage
-    gas_elements = generate_gas_phase(smiles, gas_dir)
+    gas_dir.mkdir(parents=True, exist_ok=True)
+
+    if poscar_gas is not None:
+        # Defensive measure to resolve relative paths
+        poscar_gas = Path(poscar_gas).expanduser().resolve()
+        # Load user-provided POSCAR
+        gas_elements = load_gas_from_poscar(
+                poscar_path=poscar_gas,
+                site=site_gas,
+                output_dir=gas_dir,
+                )
+    else:
+        # Generate adsorbate from RDKit
+        gas_elements = generate_gas_phase(smiles, gas_dir)
+
     build_potcar(gas_elements, gas_dir / "POTCAR")
     (gas_dir / "INCAR").write_text(GAS_INCAR_TEMPLATE)
     write_kpoints(gas_dir / "KPOINTS", "Gamma-point only", "Gamma")
@@ -39,16 +56,17 @@ def run_autoflow_pipeline(
     # 2. Slab Phase Stage
     slab_dir.mkdir(parents=True, exist_ok=True)
     
-    if poscar_path is not None:
+    if poscar_slab is not None:
         # Defensive measure to resolve relative paths
-        poscar_path = Path(poscar_path).expanduser().resolve()
+        poscar_slab = Path(poscar_slab).expanduser().resolve()
         # Load user-provided POSCAR
         slab_meta = load_slab_from_poscar(
-            poscar_path=poscar_path,
+            poscar_path=poscar_slab,
+            site=site_slab,
             output_dir=slab_dir,
         )
         # Ensure exact input POSCAR is copied into slab_dir
-        shutil.copy(poscar_path, slab_dir / "POSCAR")
+        shutil.copy(poscar_slab, slab_dir / "POSCAR")
     else:
         # Generate slab via ASE
         slab_meta = generate_slab_surface(

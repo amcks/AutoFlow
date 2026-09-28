@@ -14,22 +14,34 @@ def main():
 @main.command(name="run")
 @click.option('-s', '--slab', default=None, help='Slab element (e.g. Cu, Pt). Required unless --poscar is used.')
 @click.option('-m', '--miller', default=None, help='Comma-separated Miller indices (e.g. 1,1,1). Required unless --poscar is used.')
-@click.option('--poscar', type=click.Path(exists=True, path_type=Path), default=None, help='Path to optional user-supplied POSCAR file.')
-@click.option('-a', '--adsorbate', required=True, help='Adsorbate SMILES string.')
+@click.option('--poscar-slab', type=click.Path(exists=True, path_type=Path), default=None, help='Path to optional slab POSCAR file.')
+@click.option('--poscar-gas', type=click.Path(exists=True, path_type=Path), default=None, help='Path to optional gas POSCAR file.')
+@click.option('--site-slab', default=None, help='Comma-separated atomic indices (e.g. 43,5,10,22) for surface site override in supplied slab POSCAR file.')
+@click.option('--site-gas', default=None, help='Comma-separated atomic indices for adsorbate molecule anchor points override in supplied gas POSCAR file.')
+@click.option('-a', '--adsorbate', default=None, help='Adsorbate SMILES string.')
 @click.option('-l', '--lattconst', type=float, default=None, help='Lattice constant.')
 @click.option('-p', '--packing', default='fcc', type=click.Choice(['fcc', 'hcp', 'bcc', 'bct']))
 @click.option('-j', '--jobs', default=4, help='Max parallel screening jobs.')
 @click.option('--generate-dft', is_flag=True, default=False, help='Prepare DFT single-point directories after screening.')
-@click.option('--vasp-pp', type=click.Path(exists=True), default=None, help='Path to VASP POTCAR directory.')
-@click.option('--mace-model', type=click.Path(exists=True), default=None, help='Path to MACE model checkpoint.')
-def run_pipeline(slab, miller, poscar, adsorbate, lattconst, packing, jobs, generate_dft, vasp_pp, mace_model):
+@click.option('--vasp-pp', type=click.Path(exists=True), default=None, help='Path to VASP POTCAR directory if not specified via bash variable.')
+@click.option('--mace-model', type=click.Path(exists=True), default=None, help='Path to MACE model file if not specified via bash variable.')
+def run_pipeline(slab, miller, poscar_slab, poscar_gas, site_slab, site_gas, adsorbate, lattconst, packing, jobs, generate_dft, vasp_pp, mace_model):
     """Execute standard screening pipeline."""
-    # Enforce input mutual exclusivity
-    if poscar is None:
+    # Enforce slab input mutual exclusivity
+    if poscar_slab is None:
         if not slab or not miller:
-            raise click.UsageError("You must provide both --slab and --miller, or provide an existing --poscar file.")
+            raise click.UsageError("Must provide both --slab and --miller, or provide an existing --poscar-slab file.")
     elif slab or miller:
-        raise click.UsageError("Cannot specify --slab or --miller when using --poscar.")
+        raise click.UsageError("Cannot specify --slab or --miller when using --poscar-slab.")
+
+    # Enforce gas input mutual exclusivity
+    if poscar_gas is None:
+        if not adsorbate:
+            raise click.UsageError("Must provide --adsorbate SMILES, or provide an existing --poscar-gas file.")
+    elif adsorbate:
+        raise click.UsageError("Cannot specify --adsorbate when using --poscar-gas.")
+    elif site_gas is None:
+        raise click.UsageError("Must specify --site-gas when using --poscar-gas.")
 
     from autoflow.pipeline import run_autoflow_pipeline
     from autoflow.generators.dft import generate_dft_input
@@ -37,11 +49,16 @@ def run_pipeline(slab, miller, poscar, adsorbate, lattconst, packing, jobs, gene
     vasp_path = Path(vasp_pp) if vasp_pp else DEFAULT_VASP_POTENTIAL_PATH
     mace_path = Path(mace_model) if mace_model else DEFAULT_MACE_PATH
     miller_tuple = tuple(map(int, miller.split(','))) if miller else None
+    site_slab = list(map(int, site_slab.split(','))) if site_slab else None
+    site_gas = list(map(int, site_gas.split(','))) if site_gas else None
 
     run_autoflow_pipeline(
         slab_element=slab,
         miller=miller_tuple,
-        poscar_path=poscar,
+        poscar_slab=poscar_slab,
+        poscar_gas=poscar_gas,
+        site_slab=site_slab,
+        site_gas=site_gas,
         smiles=adsorbate,
         latt_const=lattconst,
         packing=packing,

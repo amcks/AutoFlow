@@ -69,14 +69,22 @@ autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
 **Available Options**:
 - `-s, --slab`: Surface slab element (e.g., Ag, Cu, Pt).
 - `-m, --miller`: Comma-separated Miller indices (e.g., 1,1,1).
-- `--poscar`: Path to optional user-supplied POSCAR file.
+- `--poscar-slab`: Path to optional slab POSCAR file.
+- `--poscar-gas` : Path to optional gas POSCAR file.
+- `--site-slab` : Comma-separated atomic indices (e.g. 43,5,10,22) for surface site override in supplied slab POSCAR file.
+- `--site-gas` : Comma-separated atomic indices for adsorbate molecule anchor points override in supplied gas POSCAR file.
 - `-a, --adsorbate`: Adsorbate SMILES string (e.g., C(=O)C).
 - `-l, --lattconst`: Optional lattice constant (Å).
 - `-p, --packing`: Crystal structure (fcc, hcp, bcc, bct). Default: fcc.
 - `-j, --jobs`: Maximum parallel screening processes. Default: 4.
 - `--generate-dft`: Prepare DFT input directories in screening/DFT/ after screening.
+- `--vasp-pp` : Path to  VASP POTCAR directory if not specified via bash variable.
+- `--mace-model` : Path to MACE model file if not specified via bash variable.
 
-**Note**: Usage of `-s` & `-m` options are mutually exclusive with the `--poscar` option.
+**Note**:
+- Usage of `-s` & `-m` options are mutually exclusive with the `--poscar-slab` option.
+- Usage of the `-a` option is mutually exclusive with the `--poscar-gas` option. Additionally, `--site-gas` must be specified when `--poscar-gas` is in use.
+
 
 ### 2.Standalone DFT Preparation
 If MLIP screening was completed previously, VASP DFT input data can be generated separately:

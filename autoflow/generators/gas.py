@@ -5,7 +5,7 @@ from rdkit import Chem, RDLogger
 from rdkit.Chem import AllChem
 from ase.atoms import Atoms
 from ase.build import sort
-from ase.io import write
+from ase.io import read, write
 
 SMARTS_PATTERNS = [
     ("alkene", Chem.MolFromSmarts("C=C")),
@@ -49,6 +49,37 @@ def detect_anchor_groups(mol, mol_no_dummy, old_to_new_idx, adsorption_sites):
         return anchor_groups
     except Exception:
         return []
+
+def process_output(
+    atoms: Atoms,
+    anchor_groups: List[List[int]],
+    output_dir: Path,
+    ) -> List[str]:
+
+    tags = np.full(len(atoms), -1, dtype=int)
+
+    for group_id, group in enumerate(anchor_groups):
+        for idx in group:
+            tags[idx] = group_id
+
+    atoms.set_tags(tags)
+
+    sorted_atoms = sort(atoms)
+    sorted_atoms.set_pbc(False)
+    sorted_atoms.set_cell([20.0, 20.0, 20.0])
+    sorted_atoms.center()
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    write(output_dir / "meta.xyz", sorted_atoms)
+    write(output_dir / "POSCAR", sorted_atoms, format="vasp")
+
+    elements = sorted(
+        set(sorted_atoms.get_chemical_symbols()),
+        key=lambda el: Chem.GetPeriodicTable().GetAtomicNumber(el),
+    )
+
+    return elements
 
 def generate_gas_phase(smiles: str, output_dir: Path) -> List[str]:
     """Generates POSCAR and meta.xyz for a given SMILES string, returning unique element symbols."""
@@ -100,24 +131,35 @@ def generate_gas_phase(smiles: str, output_dir: Path) -> List[str]:
             j += 1
 
     anchor_groups = detect_anchor_groups(mol, mol_no_dummy, old_to_new_idx, adsorption_sites)
-    tags = np.full(len(atoms), -1, dtype=int)
-    for group_id, group in enumerate(anchor_groups):
-        for idx in group:
-            tags[idx] = group_id
+    
+    return process_output(
+            atoms,
+            anchor_groups,
+            output_dir,
+            )
 
-    atoms.set_tags(tags)
-    sorted_atoms = sort(atoms)
-    sorted_atoms.set_pbc(False)
-    sorted_atoms.set_cell([20.0, 20.0, 20.0])
-    sorted_atoms.center()
+def load_gas_from_poscar(
+    poscar_path: Path,
+    site: List[int],
+    output_dir: Path,
+    ) -> List[str]:
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    write(output_dir / "meta.xyz", sorted_atoms)
-    write(output_dir / "POSCAR", sorted_atoms, format="vasp")
+    atoms = read(poscar_path, format="vasp")
 
-    # Extract distinct non-dummy chemical elements present in periodic order
-    elements = sorted(
-        {atom.GetSymbol() for atom in mol_no_dummy.GetAtoms() if atom.GetAtomicNum() > 0},
-        key=lambda el: Chem.GetPeriodicTable().GetAtomicNumber(el)
-    )
-    return elements
+    num_atoms = len(atoms)
+
+    for idx in site:
+        if idx < 0 or idx >= num_atoms:
+            raise ValueError(
+                f"Adsorption-site index {idx} is out of range for "
+                f"a structure containing {num_atoms} atoms"
+            )
+
+    # Each explicitly supplied adsorption point becomes its own anchor group.
+    anchor_groups = [[idx] for idx in site]
+
+    return process_output(
+        atoms,
+        anchor_groups,
+        output_dir,
+        )

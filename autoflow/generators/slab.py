@@ -194,6 +194,7 @@ def analyze_slab(
     nn_dist: float,
     output_dir: Path,
     metadata_base: Dict[str, Any],
+    site: list[int] | None = None,
     freeze_bottom: bool = False,
     freeze_fraction: float = 0.4
 ) -> Dict[str, Any]:
@@ -221,6 +222,24 @@ def analyze_slab(
                 if isinstance(constraint, FixAtoms):
                     frozen_mask[constraint.index] = True
                     #frozen_mask |= constraint.index
+
+    # Early exit for surface site override
+    if site is not None:
+        # Assemble metadata dictionary
+        metadata = {
+                **metadata_base,
+                "detected_layer_count": int(n_layers),
+                "cell": slab.get_cell().tolist(),
+                "total_atoms": int(natoms),
+                "surface_atoms": [int(i) for i in site],
+                "frozen_atoms": [int(i) for i in np.where(frozen_mask)[0]]
+                }
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        write(output_dir / "POSCAR", slab, vasp5=True, direct=True)
+        (output_dir.parent / "surface_atoms.json").write_text(json.dumps(metadata, indent=2))
+
+        return metadata
 
     # Neighbor calculations & undercoordination
     cutoff = 1.25 * nn_dist
@@ -429,6 +448,7 @@ def generate_slab_surface(
 def load_slab_from_poscar(
     poscar_path: Path,
     output_dir: Path,
+    site: list[int] | None = None,
     freeze_bottom: bool = False,
     freeze_fraction: float = 0.4
 ) -> Dict[str, Any]:
@@ -464,38 +484,8 @@ def load_slab_from_poscar(
         nn_dist, 
         output_dir, 
         metadata_base, 
+        site, 
         freeze_bottom=freeze_bottom, 
         freeze_fraction=freeze_fraction
     )
 
-
-#def load_slab_from_poscar(
-#    poscar_path: Path,
-#    output_dir: Path,
-#    freeze_bottom: bool = False,
-#    freeze_fraction: float = 0.4
-#) -> Dict[str, Any]:
-#    """Loads external POSCAR and performs surface site enumeration."""
-#    slab = read(poscar_path)
-#    
-#    # Estimate nearest-neighbor distance from bottom/bulk-like portion of the slab
-#    positions = slab.get_positions()
-#    z_min = positions[:, 2].min()
-#    bulk_like_mask = positions[:, 2] < (z_min + 3.5)
-#    
-#    if np.sum(bulk_like_mask) > 1:
-#        dists = slab.get_all_distances(mic=True)[bulk_like_mask][:, bulk_like_mask]
-#        nn_dist = np.min(dists[dists > 0.5])
-#    else:
-#        # Fallback to global minimum pairwise distance
-#        dists = slab.get_all_distances(mic=True)
-#        nn_dist = np.min(dists[dists > 0.5])
-#
-#    metadata_base = {
-#        "source_file": str(poscar_path),
-#        "element": list(set(slab.get_chemical_symbols())),
-#        "miller": None,
-#        "requested_layers": None,
-#    }
-#
-#    return analyze_slab(slab, nn_dist, output_dir, metadata_base, freeze_bottom=freeze_bottom, freeze_fraction=freeze_fraction)
