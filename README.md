@@ -2,7 +2,7 @@
 
 **AutoFlow** is an automated Python pipeline for initial adsorbate structure generation, site enumeration, and multi-tier MLIP screening on metallic surface slabs.
 
-It orchestrates the workflow from gas-phase SMILES processing and surface slab construction down to parallel MLIP relaxations (GFN-FF / MACE), structure clustering, and candidate selection for single-point DFT calculations.
+It orchestrates the workflow from gas-phase SMILES processing and surface slab construction down to parallel MLIP(MACE) relaxations, structure clustering, and candidate selection for additional single-point DFT calculations.
 
 ---
 
@@ -55,7 +55,7 @@ autoflow --help
 autoflow run --help
 ```
 
-### 1.Running Screening Pipeline
+### Running Screening Pipeline
 Execute adsorption mode enumeration, structure generation, screening, and post-analysis:
 ```bash
 autoflow run -s Ag -m 1,1,1 -a "C(=O)C" -l 4.13 -p fcc -j 4
@@ -66,13 +66,18 @@ To automatically generate VASP DFT inputs of the representative structure(s) for
 autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
 ```
 
+To enumerate adsorption modes and generate configuration structure files *without* performing MLIP screening:
+```bash
+autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --no-screen
+```
+
 **Available Options**:
 - `-s, --slab`: Surface slab element (e.g., Ag, Cu, Pt).
 - `-m, --miller`: Comma-separated Miller indices (e.g., 1,1,1).
 - `--poscar-slab`: Path to optional slab POSCAR file.
 - `--poscar-gas` : Path to optional gas POSCAR file.
-- `--site-slab` : Comma-separated atomic indices (e.g. 43,5,10,22) for surface site override in supplied slab POSCAR file.
-- `--site-gas` : Comma-separated atomic indices for adsorbate molecule anchor points override in supplied gas POSCAR file.
+- `--site-slab` : Comma-separated atomic indices or grouped tuples (e.g. 43,5,10,22) for surface site override in supplied slab POSCAR file.
+- `--site-gas` : Comma-separated atomic indices or grouped tuples for adsorbate molecule anchor points override in supplied gas POSCAR file.
 - `-a, --adsorbate`: Adsorbate SMILES string (e.g., C(=O)C).
 - `-l, --lattconst`: Optional lattice constant (Å).
 - `-p, --packing`: Crystal structure (fcc, hcp, bcc, bct). Default: fcc.
@@ -87,8 +92,8 @@ autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
 - Usage of the `-a` option is mutually exclusive with the `--poscar-gas` option. Additionally, `--site-gas` must be specified when `--poscar-gas` is in use.
 
 
-### 2.Standalone DFT Preparation
-If MLIP screening was completed previously, VASP DFT input data can be generated separately:
+### Standalone DFT Preparation
+If MLIP screening was completed previously in a separate job, corresponding VASP DFT input data can be generated:
 ```bash
 autoflow prep-dft -d ./screening
 ```
