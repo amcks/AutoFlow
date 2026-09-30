@@ -1,8 +1,10 @@
+from __future__ import annotations
 import sys
 import subprocess
 import shutil
 from pathlib import Path
 from ase.io import read
+from typing import List, Tuple, Union
 
 from autoflow.core.config import DEFAULT_VASP_POTENTIAL_PATH, DEFAULT_MACE_PATH, GAS_INCAR_TEMPLATE, SLAB_INCAR_TEMPLATE, SLURM_SCRIPT
 from autoflow.core.utils import build_potcar, write_kpoints
@@ -12,16 +14,18 @@ from autoflow.generators.slab import generate_slab_surface, load_slab_from_posca
 from autoflow.screening.post_analysis import run_post_analysis
 from autoflow.screening.runner import run_parallel_screening
 
+# Alias for site indices
+SiteIndex = Union[int, Tuple[int, ...]]
 
 def run_autoflow_pipeline(
     smiles: str,
     max_parallel_jobs: int,
     slab_element: str | None = None,
-    miller: tuple[int, int, int] | None = None,
+    miller: Tuple[int, int, int] | None = None,
     poscar_slab: Path | None = None,
     poscar_gas: Path | None = None,
-    site_slab: list[int] | None = None,
-    site_gas: list[int] | None = None,
+    site_slab: List[SiteIndex] | None = None,
+    site_gas: List[SiteIndex] | None = None,
     latt_const: float | None = None,
     packing: str = "fcc",
     vasp_potential_path: Path = DEFAULT_VASP_POTENTIAL_PATH,
@@ -88,6 +92,7 @@ def run_autoflow_pipeline(
     write_kpoints(slab_dir / "KPOINTS", "Slab k-points", "4 4 1")
 
     # 3. Enumeration Stage (inside screening/)
+    screening_dir.mkdir(exist_ok=True)
     combined_elements = slab_elements + gas_elements
     build_potcar(combined_elements, work_dir / "POTCAR")
     (work_dir / "INCAR").write_text(SLAB_INCAR_TEMPLATE)
@@ -98,7 +103,6 @@ def run_autoflow_pipeline(
     n_atoms = len(read(gas_dir / "meta.xyz"))
 
     if n_atoms == 1:
-        screening_dir.mkdir(exist_ok=True)
         generate_monoatomic_configurations(
             slab_path=slab_dir / "POSCAR",
             gas_path=gas_dir / "POSCAR",
@@ -129,12 +133,13 @@ def run_autoflow_pipeline(
                 text=True
             )
         except subprocess.CalledProcessError as e:
-            sys.stderr.write(f"DockonSurf failed with returncode {e.returncode}:\n{e.stderr}\n")
-            raise e
+            error_msg = e.stderr.strip() if e.stderr else e.stdout.strip()
+            raise click.ClickException(
+                f"DockOnSurf execution failed (Exit Code {e.returncode}):\n{error_msg}"
+            ) from e
 
     # File cleanup
     for_transport = ["dockonsurf.inp", "dockonsurf.log", "POSCAR", "POTCAR", "INCAR", "KPOINTS", "submit.sh", "surface_atoms.json"]
-    screening_dir.mkdir(exist_ok=True)
     for file_name in for_transport:
         source = work_dir / file_name
         if source.is_file():

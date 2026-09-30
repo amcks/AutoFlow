@@ -7,6 +7,10 @@ from autoflow.core.config import (
     SLURM_SCRIPT,
 )
 from autoflow.core.utils import (
+    MillerIndexParam,
+    AtomIndexParam,
+    MILLER_INDEX_PARAM,
+    ATOM_INDEX_PARAM,
     build_potcar,
     write_kpoints,
 )
@@ -18,6 +22,10 @@ __all__ = [
     "GAS_INCAR_TEMPLATE",
     "SLAB_INCAR_TEMPLATE",
     "SLURM_SCRIPT",
+    "MillerIndexParam",
+    "AtomIndexParam",
+    "MILLER_INDEX_PARAM",
+    "ATOM_INDEX_PARAM",
     "write_kpoints",
     "build_potcar",
 ]

@@ -1,11 +1,13 @@
 from pathlib import Path
-from typing import List
+from typing import List, Tuple, Union
 import numpy as np
 from rdkit import Chem, RDLogger
 from rdkit.Chem import AllChem
 from ase.atoms import Atoms
 from ase.build import sort
 from ase.io import read, write
+
+SiteIndex = Union[int, Tuple[int, ...]]
 
 SMARTS_PATTERNS = [
     ("alkene", Chem.MolFromSmarts("C=C")),
@@ -140,23 +142,32 @@ def generate_gas_phase(smiles: str, output_dir: Path) -> List[str]:
 
 def load_gas_from_poscar(
     poscar_path: Path,
-    site: List[int],
+    site: List[SiteIndex],
     output_dir: Path,
     ) -> List[str]:
 
     atoms = read(poscar_path, format="vasp")
-
     num_atoms = len(atoms)
 
-    for idx in site:
-        if idx < 0 or idx >= num_atoms:
-            raise ValueError(
-                f"Adsorption-site index {idx} is out of range for "
-                f"a structure containing {num_atoms} atoms"
-            )
+    # For simplicity, flatten integers and tuples, preserve order, remove duplicates
+    unique_indices = []
+    seen = set()
+
+    for item in site:
+        # Convert single integers into 1-tuples for uniformity
+        indices = (item,) if isinstance(item, int) else item
+        for idx in indices:
+            if idx not in seen:
+                if idx < 0 or idx >= num_atoms:
+                    raise ValueError(
+                            f"Adsorption site index {idx} is out of range for "
+                            f"a structure containing {num_atoms} atoms"
+                    )
+                seen.add(idx)
+                unique_indices.append(idx)
 
     # Each explicitly supplied adsorption point becomes its own anchor group.
-    anchor_groups = [[idx] for idx in site]
+    anchor_groups = [[idx] for idx in unique_indices]
 
     return process_output(
         atoms,

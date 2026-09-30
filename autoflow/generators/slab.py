@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any, List
+from typing import Tuple, Optional, Dict, Any, List, Union
 import numpy as np
 import spglib
 from scipy.spatial import Delaunay
@@ -11,6 +11,7 @@ from ase.neighborlist import NeighborList
 from ase.io import read, write
 from matplotlib.path import Path as MPLPath
 
+SiteIndex = Union[int, Tuple[int, ...]]
 
 # Helper Functions
 def crosses_pbc(indices, frac_coords, threshold=0.8) -> bool:
@@ -194,7 +195,7 @@ def analyze_slab(
     nn_dist: float,
     output_dir: Path,
     metadata_base: Dict[str, Any],
-    site: list[int] | None = None,
+    site: List[SiteIndex] | None = None,
     freeze_bottom: bool = False,
     freeze_fraction: float = 0.4
 ) -> Dict[str, Any]:
@@ -225,15 +226,53 @@ def analyze_slab(
 
     # Early exit for surface site override
     if site is not None:
-        # Assemble metadata dictionary
+        surface_atoms: List[int] = []
+        bridge_sites: List[List[int]] = []
+        threefold_sites: List[List[int]] = []
+        threefold_types: List[str] = []
+        fourfold_sites: List[List[int]] = []
+        fourfold_types: List[str] = []
+
+        # Parse user overrides by geometry cardinality
+        for s in site:
+            if isinstance(s, int):
+                surface_atoms.append(int(s))
+            elif isinstance(s, (tuple, list)):
+                indices = [int(i) for i in s]
+                for idx in indices:
+                    if idx < 0 or idx >= natoms:
+                        raise ValueError(
+                            f"Site index {idx} is out of bounds for slab with {natoms} atoms."
+                        )
+                if len(indices) == 2:
+                    bridge_sites.append(indices)
+                elif len(indices) == 3:
+                    threefold_sites.append(indices)
+                    threefold_types.append("threefold")
+                elif len(indices) == 4:
+                    fourfold_sites.append(indices)
+                    fourfold_types.append("fourfold")
+                elif len(indices) == 1:
+                    surface_atoms.append(indices[0])
+                else:
+                    raise ValueError(
+                        f"Unsupported site tuple length {len(indices)} in {s}. "
+                        f"Supported sites are single atoms (1), bridge (2), threefold (3), or fourfold (4)."
+                    )
+        
         metadata = {
-                **metadata_base,
-                "detected_layer_count": int(n_layers),
-                "cell": slab.get_cell().tolist(),
-                "total_atoms": int(natoms),
-                "surface_atoms": [int(i) for i in site],
-                "frozen_atoms": [int(i) for i in np.where(frozen_mask)[0]]
-                }
+            **metadata_base,
+            "detected_layer_count": int(n_layers),
+            "cell": slab.get_cell().tolist(),
+            "total_atoms": int(natoms),
+            "surface_atoms": surface_atoms,
+            "bridge_sites": bridge_sites,
+            "threefold_sites": threefold_sites,
+            "threefold_types": threefold_types,
+            "fourfold_sites": fourfold_sites,
+            "fourfold_types": fourfold_types,
+            "frozen_atoms": [int(i) for i in np.where(frozen_mask)[0]]
+        }
 
         output_dir.mkdir(parents=True, exist_ok=True)
         write(output_dir / "POSCAR", slab, vasp5=True, direct=True)
@@ -448,7 +487,7 @@ def generate_slab_surface(
 def load_slab_from_poscar(
     poscar_path: Path,
     output_dir: Path,
-    site: list[int] | None = None,
+    site: List[SiteIndex] | None = None,
     freeze_bottom: bool = False,
     freeze_fraction: float = 0.4
 ) -> Dict[str, Any]:

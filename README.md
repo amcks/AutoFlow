@@ -1,4 +1,4 @@
-# AutoFlow v.1.4.0
+# AutoFlow v.1.4
 
 **AutoFlow** is an automated Python pipeline for initial adsorbate structure generation, site enumeration, and multi-tier MLIP screening on metallic surface slabs.
 
@@ -79,8 +79,8 @@ autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
 - `-j, --jobs`: Maximum parallel screening processes. Default: 4.
 - `--vasp-pp` : Path to  VASP POTCAR directory if not specified via bash variable.
 - `--mace-model` : Path to MACE model file if not specified via bash variable.
-- `--no-screen` : Option to stop after adsorption mode enumeration without performing MLIP screening.
-- `--generate-dft`: Option to prepare DFT input directories in screening/DFT/ after screening.
+- `--no-screen` : \[Flag\] Option to stop after adsorption mode enumeration without performing MLIP screening.
+- `--generate-dft`: \[Flag\] Option to prepare DFT input directories in screening/DFT/ after screening.
 
 **Notes**:
 - Usage of `-s` & `-m` options are mutually exclusive with the `--poscar-slab` option.
