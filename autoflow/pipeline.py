@@ -26,6 +26,7 @@ def run_autoflow_pipeline(
     packing: str = "fcc",
     vasp_potential_path: Path = DEFAULT_VASP_POTENTIAL_PATH,
     mace_model_path: Path = DEFAULT_MACE_PATH,
+    run_screening: bool = True,
 ) -> None:
     work_dir = Path.cwd()
     gas_dir = work_dir / "gas"
@@ -138,6 +139,11 @@ def run_autoflow_pipeline(
         source = work_dir / file_name
         if source.is_file():
             shutil.move(source, screening_dir / file_name)
+
+    # Early exit for structure-only
+    if not run_screening:
+        print("Structure and site enumeration complete. Exiting without performing MLIP screening.")
+        return
 
     # 4. Screening Stage
     run_parallel_screening(

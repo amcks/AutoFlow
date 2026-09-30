@@ -22,10 +22,11 @@ def main():
 @click.option('-l', '--lattconst', type=float, default=None, help='Lattice constant.')
 @click.option('-p', '--packing', default='fcc', type=click.Choice(['fcc', 'hcp', 'bcc', 'bct']))
 @click.option('-j', '--jobs', default=4, help='Max parallel screening jobs.')
-@click.option('--generate-dft', is_flag=True, default=False, help='Prepare DFT single-point directories after screening.')
 @click.option('--vasp-pp', type=click.Path(exists=True), default=None, help='Path to VASP POTCAR directory if not specified via bash variable.')
 @click.option('--mace-model', type=click.Path(exists=True), default=None, help='Path to MACE model file if not specified via bash variable.')
-def run_pipeline(slab, miller, poscar_slab, poscar_gas, site_slab, site_gas, adsorbate, lattconst, packing, jobs, generate_dft, vasp_pp, mace_model):
+@click.option('--no-screen', is_flag=True, default=False, help='Stop after adsorption mode enumeration without performing MLIP screening.')
+@click.option('--generate-dft', is_flag=True, default=False, help='Prepare DFT single-point directories after screening.')
+def run_pipeline(slab, miller, poscar_slab, poscar_gas, site_slab, site_gas, adsorbate, lattconst, packing, jobs, vasp_pp, mace_model, no_screen, generate_dft):
     """Execute standard screening pipeline."""
     # Enforce slab input mutual exclusivity
     if poscar_slab is None:
@@ -65,9 +66,12 @@ def run_pipeline(slab, miller, poscar_slab, poscar_gas, site_slab, site_gas, ads
         max_parallel_jobs=jobs,
         vasp_potential_path=vasp_path,
         mace_model_path=mace_path,
+        run_screening=not no_screen,
     )
 
     if generate_dft:
+        if no_screen:
+            raise click.UsageError("Cannot use --generate-dft alongside --no-screen as screening is required for DFT inputs generation.")
         screening_dir = Path.cwd() / "screening"
         generate_dft_input(screening_dir=screening_dir)
 

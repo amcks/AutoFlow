@@ -1,4 +1,4 @@
-# AutoFlow
+# AutoFlow v.1.4.0
 
 **AutoFlow** is an automated Python pipeline for initial adsorbate structure generation, site enumeration, and multi-tier MLIP screening on metallic surface slabs.
 
@@ -42,8 +42,8 @@ pip install -e .
 Configure paths for VASP pseudopotentials and MACE model via environment variables in your `./bashrc` or within your SLURM submission scripts:
 
 ```bash
-export VASP_PP_PATH="/path/to/vasp/potentials/PBE.54"
-export MACE_MODEL_PATH="/path/to/mace_adsorption_ft_cpu.model"
+export VASP_PP_PATH="/path/to/vasp/potentials"
+export MACE_MODEL_PATH="/path/to/MACE/.model/file"
 ```
 
 ## Usage
@@ -77,11 +77,12 @@ autoflow run -s Ag -m 1,1,1 -a "C(=O)C" --generate-dft
 - `-l, --lattconst`: Optional lattice constant (Å).
 - `-p, --packing`: Crystal structure (fcc, hcp, bcc, bct). Default: fcc.
 - `-j, --jobs`: Maximum parallel screening processes. Default: 4.
-- `--generate-dft`: Prepare DFT input directories in screening/DFT/ after screening.
 - `--vasp-pp` : Path to  VASP POTCAR directory if not specified via bash variable.
 - `--mace-model` : Path to MACE model file if not specified via bash variable.
+- `--no-screen` : Option to stop after adsorption mode enumeration without performing MLIP screening.
+- `--generate-dft`: Option to prepare DFT input directories in screening/DFT/ after screening.
 
-**Note**:
+**Notes**:
 - Usage of `-s` & `-m` options are mutually exclusive with the `--poscar-slab` option.
 - Usage of the `-a` option is mutually exclusive with the `--poscar-gas` option. Additionally, `--site-gas` must be specified when `--poscar-gas` is in use.
 
